@@ -3,248 +3,391 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penny Momentum Bot — Dashboard</title>
+<title>Momentum Terminal</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  :root{--bg:#0d1117;--card:#161b22;--bd:#26303d;--tx:#e6edf3;--mut:#8b949e;
-        --grn:#3fb950;--red:#f85149;--blu:#58a6ff;--amb:#d29922;}
+  :root{
+    --bg:#070a10; --panel:#0e131c; --panel2:#121925; --line:#1d2634;
+    --txt:#dfe6f0; --muted:#69768c; --faint:#3a4658;
+    --gold:#e8b54b; --teal:#3fcabc; --grn:#46d39a; --red:#ff5d6c;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+    --mono:"SFMono-Regular",ui-monospace,"Cascadia Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--tx);font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
-  header{display:flex;align-items:center;justify-content:space-between;
-         padding:14px 22px;border-bottom:1px solid var(--bd);background:var(--card)}
-  header h1{font-size:17px;font-weight:600}
-  header h1 span{color:var(--blu)}
-  .pill{font-size:12px;padding:4px 10px;border-radius:20px;font-weight:600}
-  .pill.on{background:rgba(63,185,80,.15);color:var(--grn)}
-  .pill.off{background:rgba(248,81,73,.15);color:var(--red)}
-  nav{display:flex;gap:4px;padding:10px 22px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
-  nav button{background:none;border:none;color:var(--mut);padding:8px 14px;
-             border-radius:7px;cursor:pointer;font-size:13px;font-weight:500}
-  nav button.active{background:var(--bg);color:var(--tx)}
-  main{padding:22px;max-width:1100px;margin:0 auto}
-  .tab{display:none}.tab.active{display:block}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
-  .card{background:var(--card);border:1px solid var(--bd);border-radius:11px;padding:16px}
-  .card .lbl{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
-  .card .val{font-size:24px;font-weight:700;margin-top:6px}
-  .chartbox{background:var(--card);border:1px solid var(--bd);border-radius:11px;padding:16px;margin-bottom:18px}
-  h2{font-size:14px;margin-bottom:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+  html,body{height:100%}
+  body{background:
+      radial-gradient(900px 500px at 85% -10%,rgba(232,181,75,.06),transparent 60%),
+      radial-gradient(700px 600px at -10% 110%,rgba(63,202,188,.05),transparent 55%),
+      var(--bg);
+    color:var(--txt);font-family:var(--sans);font-size:13.5px;-webkit-font-smoothing:antialiased}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+
+  /* ---- shell: sidebar + main ---- */
+  .shell{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+  aside{background:linear-gradient(180deg,var(--panel),#0a0e15);border-right:1px solid var(--line);
+        display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 20px 18px;border-bottom:1px solid var(--line)}
+  .brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,var(--gold),#b9842a);
+        display:grid;place-items:center;color:#1a130a;box-shadow:var(--shadow);flex:none}
+  .brand b{font-size:14.5px;letter-spacing:.2px;font-weight:650;line-height:1.1}
+  .brand small{display:block;color:var(--muted);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;margin-top:2px}
+  nav{padding:14px 12px;display:flex;flex-direction:column;gap:3px;flex:1}
+  nav .lbl{color:var(--faint);font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:12px 12px 6px}
+  nav button{display:flex;align-items:center;gap:11px;width:100%;background:none;border:none;color:var(--muted);
+        padding:9px 12px;border-radius:9px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;
+        text-align:left;position:relative;transition:.14s}
+  nav button:hover{color:var(--txt);background:var(--panel2)}
+  nav button.active{color:var(--txt);background:linear-gradient(90deg,rgba(232,181,75,.12),rgba(232,181,75,.02))}
+  nav button.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2.5px;border-radius:3px;background:var(--gold)}
+  nav button svg{width:17px;height:17px;flex:none}
+  .side-foot{padding:14px 18px;border-top:1px solid var(--line);color:var(--faint);font-size:10.5px;letter-spacing:.04em}
+  .side-foot .num{color:var(--muted)}
+
+  main{min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+        padding:16px 26px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;
+        background:rgba(7,10,16,.82);backdrop-filter:blur(10px)}
+  .topbar h1{font-size:15px;font-weight:600;letter-spacing:.2px}
+  .topbar .sub{color:var(--muted);font-size:11.5px;margin-top:1px}
+  .top-right{display:flex;align-items:center;gap:14px}
+  .clock{color:var(--muted);font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;
+        padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel)}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+  .pill.on{color:var(--grn);border-color:rgba(70,211,154,.3)} .pill.on .dot{background:var(--grn);box-shadow:0 0 0 3px rgba(70,211,154,.15)}
+  .pill.off{color:var(--gold);border-color:rgba(232,181,75,.3)} .pill.off .dot{background:var(--gold);box-shadow:0 0 0 3px rgba(232,181,75,.12)}
+
+  .content{padding:24px 26px 40px;max-width:1180px;width:100%}
+  .tab{display:none;animation:fade .25s ease}.tab.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .banner{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,rgba(232,181,75,.1),transparent);
+        border:1px solid rgba(232,181,75,.25);color:#f0cd86;padding:11px 15px;border-radius:11px;margin-bottom:20px;font-size:12.5px}
+  .banner svg{width:16px;height:16px;flex:none;color:var(--gold)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin-bottom:20px}
+  .stat{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+        border-radius:13px;padding:15px 16px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+  .stat::after{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);opacity:.5}
+  .stat .k{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em}
+  .stat .k svg{width:13px;height:13px;color:var(--faint)}
+  .stat .v{font-size:23px;font-weight:600;margin-top:9px}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .panel-h{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .panel-h svg{width:15px;height:15px;color:var(--gold)}
+  .panel-h h2{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.13em}
+
+  .ai{display:flex;gap:16px;align-items:center}
+  .ai .badge{width:54px;height:54px;border-radius:13px;background:linear-gradient(145deg,rgba(63,202,188,.18),rgba(63,202,188,.04));
+        border:1px solid rgba(63,202,188,.3);display:grid;place-items:center;color:var(--teal);flex:none}
+  .ai .badge svg{width:26px;height:26px}
+  .ai .pick{font-size:22px;font-weight:700;letter-spacing:.3px}
+  .ai .why{color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.5}
+
   table{width:100%;border-collapse:collapse}
-  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd);font-size:13px}
-  th{color:var(--mut);font-weight:600}
-  .pass{color:var(--grn);font-weight:600}.fail{color:var(--mut)}
+  th,td{text-align:left;padding:10px 12px;font-size:12.5px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--panel2)}
+  .tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .tag.ok{color:var(--grn);background:rgba(70,211,154,.12)}
+  .tag.no{color:var(--muted);background:rgba(105,118,140,.1)}
+  .sym{font-weight:650;letter-spacing:.3px}
   .pos{color:var(--grn)}.neg{color:var(--red)}
-  .win{background:rgba(88,166,255,.08)}
-  form .row{display:flex;justify-content:space-between;align-items:center;
-            padding:10px 0;border-bottom:1px solid var(--bd)}
-  form label{color:var(--mut)}
-  form input{background:var(--bg);border:1px solid var(--bd);color:var(--tx);
-             padding:7px 10px;border-radius:7px;width:140px;text-align:right}
-  .btn{background:var(--blu);color:#fff;border:none;padding:10px 18px;border-radius:8px;
-       cursor:pointer;font-weight:600;font-size:13px;margin-top:14px}
-  .btn.danger{background:var(--red)}.btn.ghost{background:var(--bd)}
-  .note{color:var(--mut);font-size:12px;margin-top:10px}
-  .banner{background:rgba(210,153,34,.12);border:1px solid var(--amb);color:var(--amb);
-          padding:10px 14px;border-radius:9px;margin-bottom:16px;font-size:13px}
-  .ai{background:var(--card);border:1px solid var(--bd);border-radius:11px;padding:16px;margin-bottom:18px}
-  .ai .pickname{font-size:22px;font-weight:700;color:var(--blu)}
-  .toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--bd);
-         padding:12px 18px;border-radius:9px;opacity:0;transition:.3s;pointer-events:none}
-  .toast.show{opacity:1}
+  .rowhi td{background:rgba(232,181,75,.04)}
+
+  form .frow{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid var(--line)}
+  form .frow:last-child{border-bottom:none}
+  form label{color:var(--muted);font-size:12.5px}
+  form input{background:var(--bg);border:1px solid var(--line);color:var(--txt);font-family:var(--mono);
+        padding:8px 11px;border-radius:8px;width:150px;text-align:right;font-size:12.5px}
+  form input:focus{outline:none;border-color:var(--gold)}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel2);
+        color:var(--txt);padding:10px 16px;border-radius:9px;cursor:pointer;font:inherit;font-weight:600;font-size:12.5px;transition:.14s}
+  .btn:hover{border-color:var(--faint)}
+  .btn svg{width:15px;height:15px}
+  .btn.primary{background:linear-gradient(145deg,var(--gold),#cf9a36);color:#1a130a;border:none}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.danger{color:var(--red);border-color:rgba(255,93,108,.3);background:rgba(255,93,108,.07)}
+  .btn.danger:hover{background:rgba(255,93,108,.14)}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .hint{color:var(--muted);font-size:12px;margin-top:12px;line-height:1.5}
+  .empty{color:var(--faint);font-style:italic}
+  ul.clean{list-style:none}
+  ul.clean li{display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li svg{width:14px;height:14px;color:var(--faint)}
+
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--panel2);border:1px solid var(--line);
+        padding:13px 18px;border-radius:11px;font-size:12.5px;box-shadow:var(--shadow);
+        opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;display:flex;align-items:center;gap:9px}
+  .toast.show{opacity:1;transform:none}
+  .toast svg{width:15px;height:15px;color:var(--teal)}
 </style>
 </head>
 <body>
-<header>
-  <h1>⚡ Penny <span>Momentum</span> Bot</h1>
-  <span id="conn" class="pill off">connecting…</span>
-</header>
-<nav>
-  <button class="active" data-tab="overview">Overview</button>
-  <button data-tab="candidates">Candidates</button>
-  <button data-tab="position">Position</button>
-  <button data-tab="history">History</button>
-  <button data-tab="config">Config</button>
-  <button data-tab="controls">Controls</button>
-</nav>
-<main>
-  <div id="simbanner" class="banner" style="display:none">
-    Demo mode — no API keys detected. Showing simulated data. Add keys in <b>.env</b> for live data.
-  </div>
-
-  <!-- OVERVIEW -->
-  <section id="overview" class="tab active">
-    <div class="grid">
-      <div class="card"><div class="lbl">Equity</div><div class="val" id="m-eq">—</div></div>
-      <div class="card"><div class="lbl">Cash</div><div class="val" id="m-cash">—</div></div>
-      <div class="card"><div class="lbl">Buying Power</div><div class="val" id="m-bp">—</div></div>
-      <div class="card"><div class="lbl">Mode</div><div class="val" id="m-mode">—</div></div>
-      <div class="card"><div class="lbl">Day Trades</div><div class="val" id="m-dt">—</div></div>
-      <div class="card"><div class="lbl">Trades Today</div><div class="val" id="m-tt">—</div></div>
+<div class="shell">
+  <!-- ===== sidebar ===== -->
+  <aside>
+    <div class="brand">
+      <span class="mark">
+        <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M3 17l5-6 4 4 6-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </span>
+      <span><b>Momentum</b><small>Terminal</small></span>
     </div>
-    <div class="ai">
-      <h2>AI Pick (Claude)</h2>
-      <div class="pickname" id="ai-pick">—</div>
-      <div class="note" id="ai-reason">Highest-volume candidate that passes all filters.</div>
-    </div>
-    <div class="chartbox"><h2>Equity Curve</h2><canvas id="eqChart" height="90"></canvas></div>
-    <div class="chartbox"><h2>Intraday Price — <span id="intra-sym">—</span></h2>
-      <canvas id="intraChart" height="90"></canvas></div>
-  </section>
+    <nav>
+      <span class="lbl">Monitor</span>
+      <button class="active" data-tab="overview">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
+        Overview</button>
+      <button data-tab="candidates">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="18" cy="16" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M20.5 18.5L22 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Candidates</button>
+      <button data-tab="position">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" stroke="currentColor" stroke-width="1.7"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="1.7"/><path d="M3 12h18" stroke="currentColor" stroke-width="1.7"/></svg>
+        Position</button>
+      <button data-tab="history">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        History</button>
+      <span class="lbl">Manage</span>
+      <button data-tab="config">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 8h9M18 8h1M5 16h1M10 16h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="16" cy="8" r="2.4" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="16" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg>
+        Parameters</button>
+      <button data-tab="controls">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Controls</button>
+    </nav>
+    <div class="side-foot">v1.0 &middot; <span class="num" id="foot-mode">paper</span></div>
+  </aside>
 
-  <!-- CANDIDATES -->
-  <section id="candidates" class="tab">
-    <div class="chartbox"><h2>Candidate Volume</h2><canvas id="volChart" height="80"></canvas></div>
-    <div class="chartbox">
-      <h2>Scanned Candidates</h2>
-      <table><thead><tr><th>Symbol</th><th>Price</th><th>Volume</th><th>Move</th>
-        <th>Past Pop</th><th>Status</th></tr></thead>
-        <tbody id="cand-rows"></tbody></table>
+  <!-- ===== main ===== -->
+  <main>
+    <div class="topbar">
+      <div>
+        <h1 id="page-title">Overview</h1>
+        <div class="sub">Penny-stock momentum &middot; Alpaca + Claude</div>
+      </div>
+      <div class="top-right">
+        <span class="clock num" id="clock">--:--:--</span>
+        <span class="pill off" id="conn"><span class="dot"></span><span id="conn-text">connecting</span></span>
+      </div>
     </div>
-  </section>
 
-  <!-- POSITION -->
-  <section id="position" class="tab">
-    <div class="chartbox">
-      <h2>Open Position</h2>
-      <table><thead><tr><th>Symbol</th><th>Qty</th><th>Avg</th><th>Price</th>
-        <th>P&L $</th><th>P&L %</th></tr></thead>
-        <tbody id="pos-rows"></tbody></table>
+    <div class="content">
+      <div id="simbanner" class="banner" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Demo mode — no API keys detected. Showing simulated data. Add keys in <b>.env</b> for live trading.</span>
+      </div>
+
+      <!-- OVERVIEW -->
+      <section id="overview" class="tab active">
+        <div class="grid">
+          <div class="stat"><div class="k">Equity</div><div class="v num" id="m-eq">—</div></div>
+          <div class="stat"><div class="k">Cash</div><div class="v num" id="m-cash">—</div></div>
+          <div class="stat"><div class="k">Buying Power</div><div class="v num" id="m-bp">—</div></div>
+          <div class="stat"><div class="k">Mode</div><div class="v" id="m-mode">—</div></div>
+          <div class="stat"><div class="k">Day Trades</div><div class="v num" id="m-dt">—</div></div>
+          <div class="stat"><div class="k">Trades Today</div><div class="v num" id="m-tt">—</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-h">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1 1 8 3 3 0 0 1-5 2 3 3 0 0 1-5-2 4 4 0 0 1 1-8V6a4 4 0 0 1 4-4z" stroke="currentColor" stroke-width="1.6"/></svg>
+            <h2>AI Decision — Claude</h2>
+          </div>
+          <div class="ai">
+            <div class="badge">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1 1 8 3 3 0 0 1-5 2 3 3 0 0 1-5-2 4 4 0 0 1 1-8V6a4 4 0 0 1 4-4z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>
+            </div>
+            <div><div class="pick" id="ai-pick">—</div>
+              <div class="why" id="ai-reason">Highest-volume candidate that clears every filter.</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-6 4 4 6-8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><h2>Equity Curve</h2></div>
+          <canvas id="eqChart" height="88"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M4 14l4-4 3 3 5-7 4 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><h2>Intraday Price — <span id="intra-sym">—</span></h2></div>
+          <canvas id="intraChart" height="88"></canvas>
+        </div>
+      </section>
+
+      <!-- CANDIDATES -->
+      <section id="candidates" class="tab">
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><h2>Candidate Volume</h2></div>
+          <canvas id="volChart" height="78"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><h2>Scanner Results</h2></div>
+          <table><thead><tr><th>Symbol</th><th>Price</th><th>Volume</th><th>Move</th><th>Past Pop</th><th>Status</th></tr></thead>
+            <tbody id="cand-rows"></tbody></table>
+        </div>
+      </section>
+
+      <!-- POSITION -->
+      <section id="position" class="tab">
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" stroke="currentColor" stroke-width="1.7"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="1.7"/></svg><h2>Open Position</h2></div>
+          <table><thead><tr><th>Symbol</th><th>Qty</th><th>Avg</th><th>Price</th><th>P&amp;L $</th><th>P&amp;L %</th></tr></thead>
+            <tbody id="pos-rows"></tbody></table>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="history" class="tab">
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><h2>Trade History</h2></div>
+          <table><thead><tr><th>Date</th><th>Symbol</th></tr></thead><tbody id="hist-rows"></tbody></table>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M6 2h9l5 5v15a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0V2z" stroke="currentColor" stroke-width="1.5"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5"/></svg><h2>Daily Reports</h2></div>
+          <ul class="clean" id="report-list"></ul>
+        </div>
+      </section>
+
+      <!-- CONFIG -->
+      <section id="config" class="tab">
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M5 8h9M5 16h1M10 16h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="16" cy="8" r="2.4" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="16" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg><h2>Strategy Parameters</h2></div>
+          <form id="cfg-form"></form>
+          <div class="btn-row"><button class="btn primary" onclick="saveConfig()">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5z" stroke="currentColor" stroke-width="1.7"/><path d="M8 4v5h7" stroke="currentColor" stroke-width="1.7"/></svg>Save Parameters</button></div>
+          <div class="hint">Saved to <b>.env</b> — restart the bot to apply.</div>
+        </div>
+      </section>
+
+      <!-- CONTROLS -->
+      <section id="controls" class="tab">
+        <div class="panel">
+          <div class="panel-h"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><h2>Operations</h2></div>
+          <div class="hint" style="margin:0 0 16px">Run a single trading cycle, refresh data, or trigger the emergency stop.</div>
+          <div class="btn-row">
+            <button class="btn primary" onclick="runNow()">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg>Run Cycle</button>
+            <button class="btn" onclick="loadAll()">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 1 1-3-6.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 4v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Refresh</button>
+            <button class="btn danger" onclick="killSwitch()">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/></svg>Kill Switch — Liquidate All</button>
+          </div>
+        </div>
+      </section>
     </div>
-  </section>
-
-  <!-- HISTORY -->
-  <section id="history" class="tab">
-    <div class="chartbox"><h2>Trade History</h2>
-      <table><thead><tr><th>Date</th><th>Symbol</th></tr></thead>
-        <tbody id="hist-rows"></tbody></table></div>
-    <div class="chartbox"><h2>Daily Reports</h2><ul id="report-list" style="list-style:none"></ul></div>
-  </section>
-
-  <!-- CONFIG -->
-  <section id="config" class="tab">
-    <div class="chartbox">
-      <h2>Strategy Parameters (saved to .env)</h2>
-      <form id="cfg-form"></form>
-      <button class="btn" onclick="saveConfig()">Save Config</button>
-      <div class="note">Changes write to <b>.env</b>. Restart the bot to apply.</div>
-    </div>
-  </section>
-
-  <!-- CONTROLS -->
-  <section id="controls" class="tab">
-    <div class="chartbox">
-      <h2>Controls</h2>
-      <p class="note" style="margin-bottom:14px">Run one trading cycle now, or trigger the emergency kill switch.</p>
-      <button class="btn" onclick="runNow()">▶ Run Cycle Now</button>
-      <button class="btn ghost" onclick="loadAll()">⟳ Refresh</button>
-      <button class="btn danger" onclick="killSwitch()">⛔ KILL SWITCH (liquidate all)</button>
-    </div>
-  </section>
-</main>
+  </main>
+</div>
 <div id="toast" class="toast"></div>
 
 <script>
 const $=id=>document.getElementById(id);
 const money=v=>'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 let eqChart,volChart,intraChart;
-
-async function loadIntraday(sym){
-  const d=await (await fetch('/api/intraday?symbol='+encodeURIComponent(sym))).json();
-  $('intra-sym').textContent=d.symbol+(d.simulated?' (demo)':'');
-  if(!intraChart){intraChart=new Chart($('intraChart'),{type:'line',
-    data:{labels:d.labels,datasets:[{data:d.prices,borderColor:'#3fb950',
-      backgroundColor:'rgba(63,185,80,.1)',fill:true,tension:.25,pointRadius:0}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:'#26303d'},ticks:{color:'#8b949e',maxTicksLimit:8}},
-      y:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}}}}});}
-  else{intraChart.data.labels=d.labels;intraChart.data.datasets[0].data=d.prices;intraChart.update();}
-}
+const TITLES={overview:'Overview',candidates:'Candidates',position:'Position',history:'History',config:'Parameters',controls:'Controls'};
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); $(b.dataset.tab).classList.add('active');
+  $('page-title').textContent=TITLES[b.dataset.tab]||'';
 });
 
-function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2600);}
+function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('en-GB');}
+setInterval(tick,1000);tick();
+
+function toast(m){const t=$('toast');
+  t.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'+m;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+const baseAxis=c=>({plugins:{legend:{display:false}},scales:{
+  x:{grid:{color:'#161e2b'},ticks:{color:'#69768c',maxTicksLimit:c||8,font:{size:10}}},
+  y:{grid:{color:'#161e2b'},ticks:{color:'#69768c',font:{size:10}}}}});
 
 async function loadStatus(){
   const d=await (await fetch('/api/status')).json();
   $('conn').className='pill '+(d.connected?'on':'off');
-  $('conn').textContent=d.connected?('● LIVE · '+d.mode):'● demo (no keys)';
-  $('simbanner').style.display=d.connected?'none':'block';
-  $('m-eq').textContent=money(d.equity); $('m-cash').textContent=money(d.cash);
-  $('m-bp').textContent=money(d.buying_power); $('m-mode').textContent=d.mode;
-  $('m-dt').textContent=d.daytrades+' / 3'; $('m-tt').textContent=d.trades_today;
-  const h=d.equity_history||[];
-  const lbl=h.map(x=>x.t), val=h.map(x=>x.equity);
+  $('conn-text').textContent=d.connected?('Live · '+d.mode):'Demo';
+  $('foot-mode').textContent=(d.mode||'paper').toLowerCase();
+  $('simbanner').style.display=d.connected?'none':'flex';
+  $('m-eq').textContent=money(d.equity);$('m-cash').textContent=money(d.cash);
+  $('m-bp').textContent=money(d.buying_power);$('m-mode').textContent=d.mode;
+  $('m-dt').textContent=d.daytrades+' / 3';$('m-tt').textContent=d.trades_today;
+  const h=d.equity_history||[],lbl=h.map(x=>x.t),val=h.map(x=>x.equity);
   if(!eqChart){eqChart=new Chart($('eqChart'),{type:'line',
-    data:{labels:lbl,datasets:[{data:val,borderColor:'#58a6ff',
-      backgroundColor:'rgba(88,166,255,.1)',fill:true,tension:.3,pointRadius:0}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}},
-      y:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}}}}});}
+    data:{labels:lbl,datasets:[{data:val,borderColor:'#e8b54b',
+      backgroundColor:'rgba(232,181,75,.10)',fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
+    options:baseAxis()});}
   else{eqChart.data.labels=lbl;eqChart.data.datasets[0].data=val;eqChart.update();}
+}
+
+async function loadIntraday(sym){
+  const d=await (await fetch('/api/intraday?symbol='+encodeURIComponent(sym))).json();
+  $('intra-sym').textContent=d.symbol+(d.simulated?' · demo':'');
+  if(!intraChart){intraChart=new Chart($('intraChart'),{type:'line',
+    data:{labels:d.labels,datasets:[{data:d.prices,borderColor:'#3fcabc',
+      backgroundColor:'rgba(63,202,188,.10)',fill:true,tension:.25,pointRadius:0,borderWidth:2}]},
+    options:baseAxis(8)});}
+  else{intraChart.data.labels=d.labels;intraChart.data.datasets[0].data=d.prices;intraChart.update();}
 }
 
 async function loadCandidates(){
   const d=await (await fetch('/api/candidates')).json();
   const c=d.candidates||[];
-  $('cand-rows').innerHTML=c.map(x=>`<tr class="${x.passed?'win':''}">
-    <td><b>${x.symbol}</b></td><td>${money(x.price)}</td>
-    <td>${Number(x.volume).toLocaleString()}</td><td>+$${x.move}</td>
-    <td>$${x.pop??'-'}</td>
-    <td class="${x.passed?'pass':'fail'}">${x.passed?'✓ PASS':x.reason}</td></tr>`).join('');
+  $('cand-rows').innerHTML=c.map(x=>`<tr class="${x.passed?'rowhi':''}">
+    <td class="sym">${x.symbol}</td><td class="num">${money(x.price)}</td>
+    <td class="num">${Number(x.volume).toLocaleString()}</td><td class="num">+$${x.move}</td>
+    <td class="num">$${x.pop??'-'}</td>
+    <td>${x.passed?'<span class="tag ok">Pass</span>':'<span class="tag no">'+x.reason+'</span>'}</td></tr>`).join('');
   const passed=c.filter(x=>x.passed);
   if(passed.length){
     $('ai-pick').textContent=passed[0].symbol;
     if(d.ai&&d.ai.reason){
-      $('ai-reason').textContent=`Claude: ${d.ai.approve?'APPROVE':'REJECT'} (conf ${d.ai.confidence}) — ${d.ai.reason}`;
+      $('ai-reason').textContent=`Claude: ${d.ai.approve?'APPROVE':'REJECT'} · confidence ${d.ai.confidence} — ${d.ai.reason}`;
     }else{
-      $('ai-reason').textContent=`Approved — highest volume (${Number(passed[0].volume).toLocaleString()}), rising on building volume with a prior $${passed[0].pop} pop.`;
+      $('ai-reason').textContent=`Selected on highest volume (${Number(passed[0].volume).toLocaleString()}); rising price on building volume, prior $${passed[0].pop} pop.`;
     }
     loadIntraday(passed[0].symbol);
   }
   const lbl=c.map(x=>x.symbol),val=c.map(x=>x.volume),
-    col=c.map(x=>x.passed?'#3fb950':'#30363d');
+    col=c.map(x=>x.passed?'#46d39a':'#222c3a');
   if(!volChart){volChart=new Chart($('volChart'),{type:'bar',
-    data:{labels:lbl,datasets:[{data:val,backgroundColor:col}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8b949e'}},
-      y:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}}}}});}
+    data:{labels:lbl,datasets:[{data:val,backgroundColor:col,borderRadius:5}]},
+    options:baseAxis(12)});}
   else{volChart.data.labels=lbl;volChart.data.datasets[0].data=val;
     volChart.data.datasets[0].backgroundColor=col;volChart.update();}
 }
 
 async function loadPosition(){
-  const d=await (await fetch('/api/position')).json();
-  const p=d.positions||[];
-  $('pos-rows').innerHTML=p.length?p.map(x=>`<tr><td><b>${x.symbol}</b></td><td>${x.qty}</td>
-    <td>${money(x.avg)}</td><td>${money(x.price)}</td>
-    <td class="${x.pl>=0?'pos':'neg'}">${money(x.pl)}</td>
-    <td class="${x.pl>=0?'pos':'neg'}">${x.pl_pct.toFixed(2)}%</td></tr>`).join('')
-    :'<tr><td colspan=6 style="color:#8b949e">No open position (flat).</td></tr>';
+  const d=await (await fetch('/api/position')).json();const p=d.positions||[];
+  $('pos-rows').innerHTML=p.length?p.map(x=>`<tr><td class="sym">${x.symbol}</td><td class="num">${x.qty}</td>
+    <td class="num">${money(x.avg)}</td><td class="num">${money(x.price)}</td>
+    <td class="num ${x.pl>=0?'pos':'neg'}">${money(x.pl)}</td>
+    <td class="num ${x.pl>=0?'pos':'neg'}">${x.pl_pct.toFixed(2)}%</td></tr>`).join('')
+    :'<tr><td colspan=6 class="empty">No open position — flat.</td></tr>';
 }
 
 async function loadHistory(){
   const d=await (await fetch('/api/history')).json();
   $('hist-rows').innerHTML=(d.trades||[]).length?d.trades.map(t=>
-    `<tr><td>${t.date}</td><td><b>${t.symbol}</b></td></tr>`).join('')
-    :'<tr><td colspan=2 style="color:#8b949e">No trades yet.</td></tr>';
+    `<tr><td class="num">${t.date}</td><td class="sym">${t.symbol}</td></tr>`).join('')
+    :'<tr><td colspan=2 class="empty">No trades yet.</td></tr>';
+  const doc='<svg viewBox="0 0 24 24" fill="none"><path d="M6 2h9l5 5v15H6z" stroke="currentColor" stroke-width="1.5"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5"/></svg>';
   $('report-list').innerHTML=(d.reports||[]).length?d.reports.map(r=>
-    `<li style="padding:6px 0;border-bottom:1px solid #26303d">📄 ${r}</li>`).join('')
-    :'<li style="color:#8b949e">No reports yet.</li>';
+    `<li>${doc}${r}</li>`).join(''):'<li class="empty">No reports yet.</li>';
 }
 
 async function loadConfig(){
   const d=await (await fetch('/api/config')).json();
   $('cfg-form').innerHTML=Object.entries(d).map(([k,v])=>
-    `<div class="row"><label>${k}</label>
-     <input data-k="${k}" value="${v}"></div>`).join('');
+    `<div class="frow"><label>${k}</label><input data-k="${k}" value="${v}"></div>`).join('');
 }
 async function saveConfig(){
   const u={};document.querySelectorAll('#cfg-form input').forEach(i=>u[i.dataset.k]=i.value);
   const r=await (await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(u)})).json();
-  toast(r.msg||'Saved');
+    body:JSON.stringify(u)})).json();toast(r.msg||'Saved');
 }
 async function runNow(){const r=await (await fetch('/api/run',{method:'POST'})).json();toast(r.msg);}
 async function killSwitch(){if(!confirm('Liquidate ALL positions and cancel ALL orders?'))return;

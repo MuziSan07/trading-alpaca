@@ -19,7 +19,7 @@ performed. It directly addresses the client's two concerns:
 | Buying untradable / junk symbols | Tradable-symbol check before every order |
 | Bad/malformed market data | Graceful handling; missing data does not force a trade |
 | Need to stop everything fast | `Broker.kill_switch()` cancels all orders + liquidates all positions |
-| Dashboard / kill switch exposed | Dashboard binds to `127.0.0.1` only by default; HTTP login (`DASHBOARD_PASSWORD`) is required before any network binding is allowed |
+| Dashboard / kill switch exposed | Dashboard binds to `127.0.0.1` only by default; a session-based **login page** (`DASHBOARD_USER` / `DASHBOARD_PASSWORD`) gates every page, API call, and the kill switch; signed session cookie (`DASHBOARD_SECRET`) |
 | No audit trail | Every scan, AI decision, and order is logged to `logs/` (rotating) + daily report |
 
 ---

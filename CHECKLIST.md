@@ -19,13 +19,17 @@ Legend: `[ ]` = to do · `[~]` = in progress · `[x]` = done
 | 5 — Risk management (90% sizing, 3% stop, 1/day, PDT guard) | ✅ Done |
 | 6 — Execution (buy + scale-out exits + stop, premarket limits) | ✅ Done |
 | 7 — Orchestration (7 AM scheduler, daily flow, state) | ✅ Done |
-| 8 — Security (keys, kill switch, audit log) | 🟡 security TESTING pending |
-| 9 — Logging (file + console audit log) | ✅ Done |
-| 10 — Testing (unit tests pass) | 🟡 live paper run pending keys |
-| 11 — Docs (README, CALL_GUIDE, demo.py) | ✅ Done |
-| 12 — Open decisions | ⏳ confirm on call |
+| 8 — Security (keys, kill switch, audit log, **security_check.py + SECURITY.md**) | ✅ Done |
+| 9 — Logging + **daily report (reporter.py)** | ✅ Done |
+| 10 — Testing (**13 tests pass: strategy + risk + scanner mocks**) | 🟡 live paper run pending keys |
+| 11 — Docs (README, CALL_GUIDE, DECISIONS, SECURITY, SETUP_KEYS, demo.py) | ✅ Done |
+| 12 — Open decisions | ✅ free defaults set (DECISIONS.md); confirm w/ client phase 2 |
+
+**Extras done:** WebSocket streaming (`stream.py`), partial-fill handling,
+free yfinance float/volume, GitHub repo pushed (MuziSan07/trading-alpaca).
 
 **Demo:** run `python demo.py` for a no-keys dry-run of the full pipeline.
+**Only remaining:** client's API keys → live paper session.
 
 ---
 

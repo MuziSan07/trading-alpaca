@@ -64,8 +64,8 @@ class Scanner:
             price = float(bar.close)
             volume = float(bar.volume)
 
-            # Filter 1: penny stock <= $5
-            if price > CONFIG.max_price:
+            # Filter 1: penny stock within $1–$5 (floor avoids illiquid sub-$1)
+            if price > CONFIG.max_price or price < CONFIG.min_price:
                 continue
             # Filter 2: high volume
             if volume < CONFIG.min_volume:

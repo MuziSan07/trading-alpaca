@@ -15,12 +15,32 @@ import os
 import threading
 from datetime import date, datetime, timedelta
 
-from flask import Flask, jsonify, request, render_template
+from functools import wraps
+
+from flask import Flask, jsonify, request, render_template, Response
 
 from src.config import CONFIG
 from src import state
 
 app = Flask(__name__)
+
+
+# ---------------- auth ----------------
+def _check_auth(auth) -> bool:
+    if not CONFIG.dashboard_password:
+        return True  # no password set -> localhost-only, no login required
+    return bool(auth and auth.username == CONFIG.dashboard_user
+                and auth.password == CONFIG.dashboard_password)
+
+
+@app.before_request
+def require_login():
+    if _check_auth(request.authorization):
+        return None
+    return Response(
+        "Login required.", 401,
+        {"WWW-Authenticate": 'Basic realm="Trading Bot Dashboard"'},
+    )
 
 STATE_DIR = "state"
 EQUITY_FILE = os.path.join(STATE_DIR, "equity_history.json")
@@ -264,5 +284,10 @@ def api_kill():
 
 
 if __name__ == "__main__":
-    print("Dashboard running at http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    host, port = CONFIG.dashboard_host, CONFIG.dashboard_port
+    if not CONFIG.dashboard_password and host not in ("127.0.0.1", "localhost"):
+        print("WARNING: no DASHBOARD_PASSWORD set — forcing localhost-only binding.")
+        host = "127.0.0.1"
+    auth_state = "password-protected" if CONFIG.dashboard_password else "localhost-only (no password)"
+    print(f"Dashboard running at http://{host}:{port}  [{auth_state}]")
+    app.run(host=host, port=port, debug=False)

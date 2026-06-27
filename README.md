@@ -60,13 +60,27 @@ python run.py            # schedule the daily 7 AM ET run
 ### Web dashboard
 ```bash
 python -m dashboard.app
-#  then open http://localhost:5000
+#  then open http://127.0.0.1:5000
 ```
 A full browser dashboard: live equity chart, account status, scanned candidates
 (with volume chart), AI pick, open position + P&L, trade history, daily reports,
 **in-browser strategy config editing** (saves to `.env`), and controls
 (run-cycle-now, refresh, kill switch). Works in demo mode with simulated data
 before keys are added.
+
+**Security:** binds to `127.0.0.1` (localhost-only) by default. To expose it on
+the network, set `DASHBOARD_PASSWORD` in `.env` — that enables HTTP login and is
+required before any non-localhost binding is allowed (protects the kill switch).
+
+### Backtest the strategy (free, no keys)
+```bash
+python -m src.backtest                 # default watchlist, 6 months
+python -m src.backtest SOFI F PLUG     # custom symbols
+python -m src.backtest --period 1y SOFI
+```
+Replays the strategy on free historical daily data (yfinance) and reports
+trades, win rate, and return. Daily-granularity approximation — for validating
+the logic and rough edge, not a tick-accurate sim.
 
 ### With Docker
 ```bash

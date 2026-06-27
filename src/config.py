@@ -48,6 +48,12 @@ class Config:
     max_float: int = _i("MAX_FLOAT", 50_000_000)  # low-float ceiling
     scan_start: str = os.getenv("SCAN_START", "07:00")  # 7 AM ET premarket
 
+    # --- Dashboard security ---
+    dashboard_user: str = os.getenv("DASHBOARD_USER", "admin")
+    dashboard_password: str = os.getenv("DASHBOARD_PASSWORD", "")
+    dashboard_host: str = os.getenv("DASHBOARD_HOST", "127.0.0.1")  # localhost only
+    dashboard_port: int = _i("DASHBOARD_PORT", 5000)
+
     def validate(self) -> list[str]:
         """Return a list of problems; empty list means config is OK."""
         problems = []

@@ -101,6 +101,13 @@ class Broker:
     def get_order(self, order_id):
         return self.client.get_order_by_id(order_id)
 
+    def cancel_order(self, order_id) -> None:
+        try:
+            self.client.cancel_order_by_id(order_id)
+            log.info("Cancelled order %s", order_id)
+        except Exception as e:  # noqa: BLE001
+            log.info("Could not cancel order %s (%s)", order_id, e)
+
     def wait_for_fill(self, order_id, timeout: int = 120, poll: int = 3) -> float:
         """Wait for an order to fill. Returns actual filled qty (handles partials)."""
         waited = 0

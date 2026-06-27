@@ -90,7 +90,7 @@ def run(symbols: list[str], period: str = "6mo", starting_cash: float = 1000.0) 
             price = float(bar["Close"])
             vol = float(bar["Volume"])
             move = price - float(prev["Close"])
-            if price > CONFIG.max_price:
+            if price > CONFIG.max_price or price < CONFIG.min_price:
                 continue
             if vol < CONFIG.min_volume:
                 continue

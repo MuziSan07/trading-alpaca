@@ -1,23 +1,26 @@
-# Strategy Decisions — Demo Defaults (confirm with client in Phase 2)
+# Strategy Decisions — LOCKED (free / open-source defaults)
 
-These are the 6 open trading decisions. For the **demo**, I picked sensible
-defaults using **free / open-source** tools so the bot works end-to-end today.
-All are easily changed later via `.env` once the client confirms.
+All 6 open decisions are **decided and implemented** using free / open-source
+tools, so the project is fully self-sufficient. Each is a one-line `.env` change
+if the client ever wants something different.
 
-| # | Decision | Demo default (chosen now) | Why / cost | Confirm with client? |
+| # | Decision | **LOCKED choice** | How it's enforced | Cost |
 |---|---|---|---|---|
-| 1 | **PDT rule** (sub-$25k = max 3 day-trades / 5 days) | Keep 1 trade/day + PDT guard that blocks a breaching 4th day-trade | Safe, free, respects regulation | Yes — does he want cash account or 3/week cap? |
-| 2 | **Universe** | Listed $1–$5 stocks via Alpaca's free most-actives screener | Alpaca can't trade OTC pennies anyway | Yes — confirm listed-only is OK |
-| 3 | **Volume data feed** | **yfinance (free)** for accurate full-market volume; Alpaca IEX for execution prices | $0 vs ~$99/mo paid SIP | Yes — upgrade to SIP later if he wants |
-| 4 | **Low-float data** | **yfinance floatShares (free)**, ceiling = 50M (`MAX_FLOAT`) | $0; real float data, no paid provider | Yes — confirm float ceiling |
-| 5 | **Final strategy tweaks** | Use his stated rules as-is | — | Yes — ask if anything to add |
-| 6 | **Go-live criteria** | Paper-trade only until he approves | Safety first | Yes — how many good paper days? |
+| 1 | **PDT rule** | 1 trade/day + PDT guard → auto-caps at 3 day-trades / 5 days when equity < $25k | `risk_manager.can_trade_today()` | Free, regulation-safe |
+| 2 | **Universe** | Listed stocks priced **$1.00–$5.00** ($1 floor avoids illiquid sub-penny/OTC) | `MIN_PRICE` + `MAX_PRICE` in scanner | Free |
+| 3 | **Volume / data feed** | **Free IEX** for execution prices + **yfinance** for accurate volume & float | `ALPACA_DATA_FEED=iex` + `fundamentals.py` | $0 (vs ~$99/mo SIP) |
+| 4 | **Low-float ceiling** | **20,000,000 shares** (proper "low float" for momentum) | `MAX_FLOAT=20000000` | Free |
+| 5 | **Strategy tweaks** | Client's stated rules as-is + the $1 floor as the only safety add | scanner filters | — |
+| 6 | **Go-live criteria** | **≥ 10 paper-trading days, no critical errors, break-even-or-better** before flipping to live | Operational policy + paper default | Free |
 
-## Free stack chosen
+## Free stack (final)
 - **Execution + account:** Alpaca paper API (free)
 - **Candidate universe:** Alpaca most-actives screener (free)
 - **Accurate volume + float:** yfinance / Yahoo Finance (free, open-source)
-- **AI analysis:** Claude (client already has Anthropic access)
+- **AI analysis:** Claude (client's Anthropic key)
+- **Dashboard / backtest / CI:** all free & local
 
-All paid upgrades (SIP feed, premium float providers) remain optional and are a
-one-line config change — nothing is locked in.
+## To change any of these later
+Edit `.env` (e.g. `MAX_FLOAT`, `MIN_PRICE`, `ALPACA_DATA_FEED`) and restart —
+no code changes needed. Nothing is hard-locked; these are just the sensible
+free defaults chosen so the build is complete without waiting on anyone.

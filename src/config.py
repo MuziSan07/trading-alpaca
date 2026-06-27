@@ -33,6 +33,7 @@ class Config:
 
     # --- Strategy parameters ---
     max_price: float = _f("MAX_PRICE", 5.00)              # penny stocks <= $5
+    min_price: float = _f("MIN_PRICE", 1.00)              # avoid illiquid sub-$1
     min_volume: int = _i("MIN_VOLUME", 1_000_000)         # high volume filter
     min_price_move: float = _f("MIN_PRICE_MOVE", 0.20)    # +$0.20 move
     historical_pop: float = _f("HISTORICAL_POP", 0.50)    # popped >= $0.50 before
@@ -45,7 +46,7 @@ class Config:
     stop_pct: float = _f("STOP_PCT", 0.03)  # -3% stop loss
 
     max_trades_per_day: int = _i("MAX_TRADES_PER_DAY", 1)
-    max_float: int = _i("MAX_FLOAT", 50_000_000)  # low-float ceiling
+    max_float: int = _i("MAX_FLOAT", 20_000_000)  # low-float ceiling
     scan_start: str = os.getenv("SCAN_START", "07:00")  # 7 AM ET premarket
 
     # --- Dashboard security ---

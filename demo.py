@@ -40,6 +40,8 @@ def passes_filters(s: FakeStock):
     reasons = []
     if s.price > CONFIG.max_price:
         reasons.append(f"price ${s.price:.2f} > ${CONFIG.max_price:.2f}")
+    if s.price < CONFIG.min_price:
+        reasons.append(f"price ${s.price:.2f} < ${CONFIG.min_price:.2f} (illiquid)")
     if s.volume < CONFIG.min_volume:
         reasons.append(f"volume {s.volume:,.0f} < {CONFIG.min_volume:,.0f}")
     if move < CONFIG.min_price_move:

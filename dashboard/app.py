@@ -17,32 +17,51 @@ import random
 import threading
 from datetime import date, datetime, timedelta
 
-from functools import wraps
-
-from flask import Flask, jsonify, request, render_template, Response
+from flask import (
+    Flask, jsonify, request, render_template, redirect, url_for, session,
+)
 
 from src.config import CONFIG
 from src import state
 
 app = Flask(__name__)
+app.secret_key = os.getenv("DASHBOARD_SECRET", "") or os.urandom(24)
 
 
-# ---------------- auth ----------------
-def _check_auth(auth) -> bool:
-    if not CONFIG.dashboard_password:
-        return True  # no password set -> localhost-only, no login required
-    return bool(auth and auth.username == CONFIG.dashboard_user
-                and auth.password == CONFIG.dashboard_password)
+# ---------------- session auth ----------------
+def _auth_enabled() -> bool:
+    return bool(CONFIG.dashboard_password)
 
 
 @app.before_request
-def require_login():
-    if _check_auth(request.authorization):
+def gate():
+    if not _auth_enabled():
+        return None  # no password configured -> localhost-only, open
+    if request.endpoint in ("login", "static"):
         return None
-    return Response(
-        "Login required.", 401,
-        {"WWW-Authenticate": 'Basic realm="Trading Bot Dashboard"'},
-    )
+    if session.get("auth"):
+        return None
+    if request.path.startswith("/api"):
+        return jsonify({"error": "unauthorized"}), 401
+    return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        if (request.form.get("username") == CONFIG.dashboard_user
+                and request.form.get("password") == CONFIG.dashboard_password):
+            session["auth"] = True
+            return redirect(url_for("index"))
+        error = "Invalid username or password."
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 STATE_DIR = "state"
 EQUITY_FILE = os.path.join(STATE_DIR, "equity_history.json")

@@ -87,6 +87,8 @@
       <div class="note" id="ai-reason">Highest-volume candidate that passes all filters.</div>
     </div>
     <div class="chartbox"><h2>Equity Curve</h2><canvas id="eqChart" height="90"></canvas></div>
+    <div class="chartbox"><h2>Intraday Price — <span id="intra-sym">—</span></h2>
+      <canvas id="intraChart" height="90"></canvas></div>
   </section>
 
   <!-- CANDIDATES -->
@@ -144,7 +146,18 @@
 <script>
 const $=id=>document.getElementById(id);
 const money=v=>'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-let eqChart,volChart;
+let eqChart,volChart,intraChart;
+
+async function loadIntraday(sym){
+  const d=await (await fetch('/api/intraday?symbol='+encodeURIComponent(sym))).json();
+  $('intra-sym').textContent=d.symbol+(d.simulated?' (demo)':'');
+  if(!intraChart){intraChart=new Chart($('intraChart'),{type:'line',
+    data:{labels:d.labels,datasets:[{data:d.prices,borderColor:'#3fb950',
+      backgroundColor:'rgba(63,185,80,.1)',fill:true,tension:.25,pointRadius:0}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:'#26303d'},ticks:{color:'#8b949e',maxTicksLimit:8}},
+      y:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}}}}});}
+  else{intraChart.data.labels=d.labels;intraChart.data.datasets[0].data=d.prices;intraChart.update();}
+}
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
@@ -182,8 +195,15 @@ async function loadCandidates(){
     <td>$${x.pop??'-'}</td>
     <td class="${x.passed?'pass':'fail'}">${x.passed?'✓ PASS':x.reason}</td></tr>`).join('');
   const passed=c.filter(x=>x.passed);
-  if(passed.length){$('ai-pick').textContent=passed[0].symbol;
-    $('ai-reason').textContent=`Approved — highest volume (${Number(passed[0].volume).toLocaleString()}), rising on building volume with a prior $${passed[0].pop} pop.`;}
+  if(passed.length){
+    $('ai-pick').textContent=passed[0].symbol;
+    if(d.ai&&d.ai.reason){
+      $('ai-reason').textContent=`Claude: ${d.ai.approve?'APPROVE':'REJECT'} (conf ${d.ai.confidence}) — ${d.ai.reason}`;
+    }else{
+      $('ai-reason').textContent=`Approved — highest volume (${Number(passed[0].volume).toLocaleString()}), rising on building volume with a prior $${passed[0].pop} pop.`;
+    }
+    loadIntraday(passed[0].symbol);
+  }
   const lbl=c.map(x=>x.symbol),val=c.map(x=>x.volume),
     col=c.map(x=>x.passed?'#3fb950':'#30363d');
   if(!volChart){volChart=new Chart($('volChart'),{type:'bar',

@@ -12,6 +12,7 @@ from .broker import Broker
 from .executor import Executor
 from .logger import get_logger
 from .market_data import MarketData
+from .notifier import notify
 from .reporter import write_daily_report
 from .risk_manager import RiskManager
 from .scanner import Scanner
@@ -63,8 +64,12 @@ class Orchestrator:
             # 4. Execute + manage (sized from the ACTUAL filled qty)
             filled = self.executor.enter(plan)
             if filled > 0:
+                notify("Trade entered",
+                       f"{plan.symbol}: bought {int(filled)} @ ~${plan.entry:.2f} "
+                       f"(stop ${plan.stop_price:.2f}, TP ${plan.tp1_price:.2f}/${plan.tp2_price:.2f})")
                 outcome = self.executor.manage(plan, self.market, filled)
                 log.info("Trade on %s finished: %s", plan.symbol, outcome)
+                notify("Trade closed", f"{plan.symbol}: {outcome}")
             write_daily_report(self.broker)
             return  # one trade per day
 

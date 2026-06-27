@@ -11,7 +11,9 @@ keys are set, so it always renders for a demo.
 from __future__ import annotations
 
 import json
+import math
 import os
+import random
 import threading
 from datetime import date, datetime, timedelta
 
@@ -205,13 +207,48 @@ def api_candidates():
         from src.market_data import MarketData
         from src.scanner import Scanner
         cands = Scanner(MarketData()).scan()
-        return jsonify({"simulated": False, "candidates": [
-            {"symbol": c.symbol, "price": c.price, "volume": c.volume,
-             "move": round(c.move, 2), "pop": c.max_past_pop, "float": None,
-             "passed": True, "reason": "PASS"} for c in cands]})
+        out = [{"symbol": c.symbol, "price": c.price, "volume": c.volume,
+                "move": round(c.move, 2), "pop": c.max_past_pop, "float": None,
+                "passed": True, "reason": "PASS"} for c in cands]
+        ai = None
+        if cands:
+            try:
+                from src.ai_analyzer import AIAnalyzer
+                v = AIAnalyzer().evaluate(cands[0])
+                ai = {"symbol": cands[0].symbol, "approve": v.get("approve"),
+                      "confidence": v.get("confidence"), "reason": v.get("reason")}
+            except Exception:  # noqa: BLE001
+                ai = None
+        return jsonify({"simulated": False, "candidates": out, "ai": ai})
     except Exception as e:  # noqa: BLE001
         return jsonify({"simulated": True, "error": str(e),
                         "candidates": simulate_candidates()})
+
+
+@app.route("/api/intraday")
+def api_intraday():
+    sym = request.args.get("symbol", "")
+    b = get_broker()
+    if b is not None and sym:
+        try:
+            from src.market_data import MarketData
+            bars = MarketData().intraday_bars(sym)
+            if bars:
+                return jsonify({"simulated": False, "symbol": sym,
+                                "labels": [bp.timestamp.strftime("%H:%M") for bp in bars],
+                                "prices": [float(bp.close) for bp in bars]})
+        except Exception:  # noqa: BLE001
+            pass
+    # synthetic random-walk intraday for demo
+    price = 1.45
+    labels, prices = [], []
+    t = datetime.now() - timedelta(minutes=90)
+    for i in range(90):
+        price = max(0.5, price + random.uniform(-0.02, 0.025))
+        labels.append((t + timedelta(minutes=i)).strftime("%H:%M"))
+        prices.append(round(price, 2))
+    return jsonify({"simulated": True, "symbol": sym or "DEMO",
+                    "labels": labels, "prices": prices})
 
 
 @app.route("/api/position")

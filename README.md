@@ -1,5 +1,7 @@
 # Penny-Stock Momentum Trading Bot
 
+[![CI](https://github.com/MuziSan07/trading-alpaca/actions/workflows/ci.yml/badge.svg)](https://github.com/MuziSan07/trading-alpaca/actions/workflows/ci.yml)
+
 An automated penny-stock momentum day-trading bot for **Alpaca**, with a **Claude**
 AI analysis layer, scale-out profit-taking, and hard risk guardrails.
 Built in Python. **Paper-trading by default** — no real money moves until you say so.

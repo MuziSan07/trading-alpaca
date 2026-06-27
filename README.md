@@ -57,6 +57,17 @@ python run.py --now      # run ONE trading cycle right now (testing)
 python run.py            # schedule the daily 7 AM ET run
 ```
 
+### Web dashboard
+```bash
+python -m dashboard.app
+#  then open http://localhost:5000
+```
+A full browser dashboard: live equity chart, account status, scanned candidates
+(with volume chart), AI pick, open position + P&L, trade history, daily reports,
+**in-browser strategy config editing** (saves to `.env`), and controls
+(run-cycle-now, refresh, kill switch). Works in demo mode with simulated data
+before keys are added.
+
 ### With Docker
 ```bash
 docker compose up --build

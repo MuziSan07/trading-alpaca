@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Penny Momentum Bot — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--bd:#26303d;--tx:#e6edf3;--mut:#8b949e;
+        --grn:#3fb950;--red:#f85149;--blu:#58a6ff;--amb:#d29922;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--tx);font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;
+         padding:14px 22px;border-bottom:1px solid var(--bd);background:var(--card)}
+  header h1{font-size:17px;font-weight:600}
+  header h1 span{color:var(--blu)}
+  .pill{font-size:12px;padding:4px 10px;border-radius:20px;font-weight:600}
+  .pill.on{background:rgba(63,185,80,.15);color:var(--grn)}
+  .pill.off{background:rgba(248,81,73,.15);color:var(--red)}
+  nav{display:flex;gap:4px;padding:10px 22px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+  nav button{background:none;border:none;color:var(--mut);padding:8px 14px;
+             border-radius:7px;cursor:pointer;font-size:13px;font-weight:500}
+  nav button.active{background:var(--bg);color:var(--tx)}
+  main{padding:22px;max-width:1100px;margin:0 auto}
+  .tab{display:none}.tab.active{display:block}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:11px;padding:16px}
+  .card .lbl{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  .card .val{font-size:24px;font-weight:700;margin-top:6px}
+  .chartbox{background:var(--card);border:1px solid var(--bd);border-radius:11px;padding:16px;margin-bottom:18px}
+  h2{font-size:14px;margin-bottom:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd);font-size:13px}
+  th{color:var(--mut);font-weight:600}
+  .pass{color:var(--grn);font-weight:600}.fail{color:var(--mut)}
+  .pos{color:var(--grn)}.neg{color:var(--red)}
+  .win{background:rgba(88,166,255,.08)}
+  form .row{display:flex;justify-content:space-between;align-items:center;
+            padding:10px 0;border-bottom:1px solid var(--bd)}
+  form label{color:var(--mut)}
+  form input{background:var(--bg);border:1px solid var(--bd);color:var(--tx);
+             padding:7px 10px;border-radius:7px;width:140px;text-align:right}
+  .btn{background:var(--blu);color:#fff;border:none;padding:10px 18px;border-radius:8px;
+       cursor:pointer;font-weight:600;font-size:13px;margin-top:14px}
+  .btn.danger{background:var(--red)}.btn.ghost{background:var(--bd)}
+  .note{color:var(--mut);font-size:12px;margin-top:10px}
+  .banner{background:rgba(210,153,34,.12);border:1px solid var(--amb);color:var(--amb);
+          padding:10px 14px;border-radius:9px;margin-bottom:16px;font-size:13px}
+  .ai{background:var(--card);border:1px solid var(--bd);border-radius:11px;padding:16px;margin-bottom:18px}
+  .ai .pickname{font-size:22px;font-weight:700;color:var(--blu)}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--bd);
+         padding:12px 18px;border-radius:9px;opacity:0;transition:.3s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ Penny <span>Momentum</span> Bot</h1>
+  <span id="conn" class="pill off">connecting…</span>
+</header>
+<nav>
+  <button class="active" data-tab="overview">Overview</button>
+  <button data-tab="candidates">Candidates</button>
+  <button data-tab="position">Position</button>
+  <button data-tab="history">History</button>
+  <button data-tab="config">Config</button>
+  <button data-tab="controls">Controls</button>
+</nav>
+<main>
+  <div id="simbanner" class="banner" style="display:none">
+    Demo mode — no API keys detected. Showing simulated data. Add keys in <b>.env</b> for live data.
+  </div>
+
+  <!-- OVERVIEW -->
+  <section id="overview" class="tab active">
+    <div class="grid">
+      <div class="card"><div class="lbl">Equity</div><div class="val" id="m-eq">—</div></div>
+      <div class="card"><div class="lbl">Cash</div><div class="val" id="m-cash">—</div></div>
+      <div class="card"><div class="lbl">Buying Power</div><div class="val" id="m-bp">—</div></div>
+      <div class="card"><div class="lbl">Mode</div><div class="val" id="m-mode">—</div></div>
+      <div class="card"><div class="lbl">Day Trades</div><div class="val" id="m-dt">—</div></div>
+      <div class="card"><div class="lbl">Trades Today</div><div class="val" id="m-tt">—</div></div>
+    </div>
+    <div class="ai">
+      <h2>AI Pick (Claude)</h2>
+      <div class="pickname" id="ai-pick">—</div>
+      <div class="note" id="ai-reason">Highest-volume candidate that passes all filters.</div>
+    </div>
+    <div class="chartbox"><h2>Equity Curve</h2><canvas id="eqChart" height="90"></canvas></div>
+  </section>
+
+  <!-- CANDIDATES -->
+  <section id="candidates" class="tab">
+    <div class="chartbox"><h2>Candidate Volume</h2><canvas id="volChart" height="80"></canvas></div>
+    <div class="chartbox">
+      <h2>Scanned Candidates</h2>
+      <table><thead><tr><th>Symbol</th><th>Price</th><th>Volume</th><th>Move</th>
+        <th>Past Pop</th><th>Status</th></tr></thead>
+        <tbody id="cand-rows"></tbody></table>
+    </div>
+  </section>
+
+  <!-- POSITION -->
+  <section id="position" class="tab">
+    <div class="chartbox">
+      <h2>Open Position</h2>
+      <table><thead><tr><th>Symbol</th><th>Qty</th><th>Avg</th><th>Price</th>
+        <th>P&L $</th><th>P&L %</th></tr></thead>
+        <tbody id="pos-rows"></tbody></table>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="history" class="tab">
+    <div class="chartbox"><h2>Trade History</h2>
+      <table><thead><tr><th>Date</th><th>Symbol</th></tr></thead>
+        <tbody id="hist-rows"></tbody></table></div>
+    <div class="chartbox"><h2>Daily Reports</h2><ul id="report-list" style="list-style:none"></ul></div>
+  </section>
+
+  <!-- CONFIG -->
+  <section id="config" class="tab">
+    <div class="chartbox">
+      <h2>Strategy Parameters (saved to .env)</h2>
+      <form id="cfg-form"></form>
+      <button class="btn" onclick="saveConfig()">Save Config</button>
+      <div class="note">Changes write to <b>.env</b>. Restart the bot to apply.</div>
+    </div>
+  </section>
+
+  <!-- CONTROLS -->
+  <section id="controls" class="tab">
+    <div class="chartbox">
+      <h2>Controls</h2>
+      <p class="note" style="margin-bottom:14px">Run one trading cycle now, or trigger the emergency kill switch.</p>
+      <button class="btn" onclick="runNow()">▶ Run Cycle Now</button>
+      <button class="btn ghost" onclick="loadAll()">⟳ Refresh</button>
+      <button class="btn danger" onclick="killSwitch()">⛔ KILL SWITCH (liquidate all)</button>
+    </div>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=v=>'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+let eqChart,volChart;
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); $(b.dataset.tab).classList.add('active');
+});
+
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);}
+
+async function loadStatus(){
+  const d=await (await fetch('/api/status')).json();
+  $('conn').className='pill '+(d.connected?'on':'off');
+  $('conn').textContent=d.connected?('● LIVE · '+d.mode):'● demo (no keys)';
+  $('simbanner').style.display=d.connected?'none':'block';
+  $('m-eq').textContent=money(d.equity); $('m-cash').textContent=money(d.cash);
+  $('m-bp').textContent=money(d.buying_power); $('m-mode').textContent=d.mode;
+  $('m-dt').textContent=d.daytrades+' / 3'; $('m-tt').textContent=d.trades_today;
+  const h=d.equity_history||[];
+  const lbl=h.map(x=>x.t), val=h.map(x=>x.equity);
+  if(!eqChart){eqChart=new Chart($('eqChart'),{type:'line',
+    data:{labels:lbl,datasets:[{data:val,borderColor:'#58a6ff',
+      backgroundColor:'rgba(88,166,255,.1)',fill:true,tension:.3,pointRadius:0}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}},
+      y:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}}}}});}
+  else{eqChart.data.labels=lbl;eqChart.data.datasets[0].data=val;eqChart.update();}
+}
+
+async function loadCandidates(){
+  const d=await (await fetch('/api/candidates')).json();
+  const c=d.candidates||[];
+  $('cand-rows').innerHTML=c.map(x=>`<tr class="${x.passed?'win':''}">
+    <td><b>${x.symbol}</b></td><td>${money(x.price)}</td>
+    <td>${Number(x.volume).toLocaleString()}</td><td>+$${x.move}</td>
+    <td>$${x.pop??'-'}</td>
+    <td class="${x.passed?'pass':'fail'}">${x.passed?'✓ PASS':x.reason}</td></tr>`).join('');
+  const passed=c.filter(x=>x.passed);
+  if(passed.length){$('ai-pick').textContent=passed[0].symbol;
+    $('ai-reason').textContent=`Approved — highest volume (${Number(passed[0].volume).toLocaleString()}), rising on building volume with a prior $${passed[0].pop} pop.`;}
+  const lbl=c.map(x=>x.symbol),val=c.map(x=>x.volume),
+    col=c.map(x=>x.passed?'#3fb950':'#30363d');
+  if(!volChart){volChart=new Chart($('volChart'),{type:'bar',
+    data:{labels:lbl,datasets:[{data:val,backgroundColor:col}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8b949e'}},
+      y:{grid:{color:'#26303d'},ticks:{color:'#8b949e'}}}}});}
+  else{volChart.data.labels=lbl;volChart.data.datasets[0].data=val;
+    volChart.data.datasets[0].backgroundColor=col;volChart.update();}
+}
+
+async function loadPosition(){
+  const d=await (await fetch('/api/position')).json();
+  const p=d.positions||[];
+  $('pos-rows').innerHTML=p.length?p.map(x=>`<tr><td><b>${x.symbol}</b></td><td>${x.qty}</td>
+    <td>${money(x.avg)}</td><td>${money(x.price)}</td>
+    <td class="${x.pl>=0?'pos':'neg'}">${money(x.pl)}</td>
+    <td class="${x.pl>=0?'pos':'neg'}">${x.pl_pct.toFixed(2)}%</td></tr>`).join('')
+    :'<tr><td colspan=6 style="color:#8b949e">No open position (flat).</td></tr>';
+}
+
+async function loadHistory(){
+  const d=await (await fetch('/api/history')).json();
+  $('hist-rows').innerHTML=(d.trades||[]).length?d.trades.map(t=>
+    `<tr><td>${t.date}</td><td><b>${t.symbol}</b></td></tr>`).join('')
+    :'<tr><td colspan=2 style="color:#8b949e">No trades yet.</td></tr>';
+  $('report-list').innerHTML=(d.reports||[]).length?d.reports.map(r=>
+    `<li style="padding:6px 0;border-bottom:1px solid #26303d">📄 ${r}</li>`).join('')
+    :'<li style="color:#8b949e">No reports yet.</li>';
+}
+
+async function loadConfig(){
+  const d=await (await fetch('/api/config')).json();
+  $('cfg-form').innerHTML=Object.entries(d).map(([k,v])=>
+    `<div class="row"><label>${k}</label>
+     <input data-k="${k}" value="${v}"></div>`).join('');
+}
+async function saveConfig(){
+  const u={};document.querySelectorAll('#cfg-form input').forEach(i=>u[i.dataset.k]=i.value);
+  const r=await (await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(u)})).json();
+  toast(r.msg||'Saved');
+}
+async function runNow(){const r=await (await fetch('/api/run',{method:'POST'})).json();toast(r.msg);}
+async function killSwitch(){if(!confirm('Liquidate ALL positions and cancel ALL orders?'))return;
+  const r=await (await fetch('/api/kill',{method:'POST'})).json();toast(r.msg);}
+
+function loadAll(){loadStatus();loadCandidates();loadPosition();loadHistory();loadConfig();}
+loadAll();
+setInterval(()=>{loadStatus();loadPosition();},5000);
+</script>
+</body>
+</html>

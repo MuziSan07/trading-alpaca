@@ -1,0 +1,19 @@
+# Core trading + data SDK (official, current — NOT the deprecated alpaca-trade-api)
+alpaca-py==0.33.1
+
+# Claude / LLM analysis
+anthropic==0.40.0
+
+# Free fundamentals: full-market volume + share float (low-float filter)
+yfinance==0.2.50
+
+# Config & utilities
+python-dotenv==1.0.1
+pydantic==2.9.2
+pandas==2.2.3
+
+# Scheduling (7 AM premarket start)
+APScheduler==3.10.4
+
+# Testing
+pytest==8.3.3

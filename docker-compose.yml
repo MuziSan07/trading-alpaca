@@ -1,0 +1,12 @@
+services:
+  trading-bot:
+    build: .
+    container_name: penny-momentum-bot
+    env_file:
+      - .env
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./logs:/app/logs
+      - ./state:/app/state
+    restart: unless-stopped

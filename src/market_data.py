@@ -54,6 +54,21 @@ class MarketData:
             log.error("Snapshot fetch failed: %s", e)
             return {}
 
+    def intraday_bars(self, symbol: str, minutes: int = 180):
+        """Recent minute bars for the intraday price chart."""
+        try:
+            req = StockBarsRequest(
+                symbol_or_symbols=symbol,
+                timeframe=TimeFrame.Minute,
+                start=datetime.now() - timedelta(minutes=minutes),
+                feed=self.feed,
+            )
+            bars = self.hist.get_stock_bars(req)
+            return bars.data.get(symbol, [])
+        except Exception as e:  # noqa: BLE001
+            log.error("Intraday bars fetch failed for %s: %s", symbol, e)
+            return []
+
     def daily_bars(self, symbol: str, days: int = 30):
         """Historical daily bars — used for the 'popped $0.50+ before' check."""
         try:

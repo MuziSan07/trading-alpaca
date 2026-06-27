@@ -55,6 +55,14 @@ class Config:
     dashboard_host: str = os.getenv("DASHBOARD_HOST", "127.0.0.1")  # localhost only
     dashboard_port: int = _i("DASHBOARD_PORT", 5000)
 
+    # --- Notifications (all optional & free; blank = disabled) ---
+    notify_webhook_url: str = os.getenv("NOTIFY_WEBHOOK_URL", "")  # Slack/Discord webhook
+    smtp_host: str = os.getenv("SMTP_HOST", "")
+    smtp_port: int = _i("SMTP_PORT", 587)
+    smtp_user: str = os.getenv("SMTP_USER", "")
+    smtp_pass: str = os.getenv("SMTP_PASS", "")
+    notify_email_to: str = os.getenv("NOTIFY_EMAIL_TO", "")
+
     def validate(self) -> list[str]:
         """Return a list of problems; empty list means config is OK."""
         problems = []

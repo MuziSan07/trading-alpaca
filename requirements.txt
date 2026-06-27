@@ -15,5 +15,8 @@ pandas==2.2.3
 # Scheduling (7 AM premarket start)
 APScheduler==3.10.4
 
+# Web dashboard
+Flask==3.0.3
+
 # Testing
 pytest==8.3.3

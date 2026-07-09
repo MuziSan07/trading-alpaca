@@ -9,7 +9,7 @@ def test_config_loads_defaults():
     assert CONFIG.max_price == 5.00
     assert CONFIG.min_volume == 1_000_000
     assert CONFIG.cash_allocation == 0.90
-    assert CONFIG.stop_pct == 0.03
+    assert CONFIG.stop_pct == 0.06
 
 
 def test_scale_out_sizes_sum_to_one():
@@ -28,7 +28,7 @@ def test_exit_levels():
     stop = round(entry * (1 - CONFIG.stop_pct), 2)
     tp1 = round(entry * (1 + CONFIG.tp1_pct), 2)
     tp2 = round(entry * (1 + CONFIG.tp2_pct), 2)
-    assert stop == 1.94   # -3%
+    assert stop == 1.88   # -6%
     assert tp1 == 2.10    # +5%
     assert tp2 == 2.14    # +7%
 

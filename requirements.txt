@@ -1,8 +1,12 @@
 # Core trading + data SDK (official, current — NOT the deprecated alpaca-trade-api)
 alpaca-py>=0.42,<0.44
 
-# Claude / LLM analysis
-anthropic>=0.110,<0.113
+# LLM analysis — Ollama (local, free, default) and/or Claude
+ollama>=0.3
+anthropic>=0.110,<0.113   # only needed if AI_PROVIDER=anthropic
+
+# Timezone data (fixed EOD/ET logic via stdlib zoneinfo; required on Windows)
+tzdata>=2024.1
 
 # Free fundamentals: full-market volume + share float (low-float filter)
 yfinance>=1.4,<1.5

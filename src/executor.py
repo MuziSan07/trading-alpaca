@@ -3,21 +3,28 @@ Order execution + exit management.
 
 Entry: limit buy (premarket-compatible). We read the ACTUAL filled quantity
 (handles partial fills) and split the exits off that real number:
-  - 75% at +5%
-  - 25% at +7%
-  - whole remaining position exited at -3%
+  - 75% at +TP1
+  - 25% at +TP2
+  - whole remaining position exited at the stop
 
 Premarket-safe: ALL exits (including the stop) use LIMIT orders, because Alpaca
 rejects market orders outside regular hours. The stop sells with an aggressive
 limit (just below the live price) so it still fills quickly.
 
-Fill-aware: a resting take-profit is verified as filled before we treat that
-slice as sold, and any resting order is cancelled before a stop exit so we never
-double-sell or skip an unfilled leg.
+Fill-aware: a resting take-profit is verified filled before that slice counts as
+sold, and any resting order is cancelled before a stop exit.
+
+EOD: positions are force-closed at a FIXED wall-clock time (EOD_CLOSE, default
+20:00 America/New_York) — not a relative timer that depended on entry time.
+
+Recovery: manage() accepts recovered=True to resume protecting a position found
+open at startup (single protective stop + take-profit on the remaining shares).
 """
 from __future__ import annotations
 
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from alpaca.trading.enums import OrderStatus
 
@@ -28,6 +35,18 @@ from .risk_manager import TradePlan
 from . import state
 
 log = get_logger("executor")
+_ET = ZoneInfo("America/New_York")
+
+
+def _eod_deadline_epoch() -> float:
+    """Epoch seconds for today's EOD_CLOSE in ET (or now, if already past)."""
+    try:
+        hh, mm = (int(x) for x in CONFIG.eod_close.split(":"))
+    except Exception:  # noqa: BLE001
+        hh, mm = 20, 0
+    now = datetime.now(_ET)
+    cutoff = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+    return cutoff.timestamp() if now < cutoff else time.time()
 
 
 class Executor:
@@ -40,6 +59,8 @@ class Executor:
             p = self.stream.get(symbol)
             if p:
                 return p
+        if market is None:
+            return None
         snap = market.snapshots([symbol]).get(symbol)
         if snap and snap.latest_trade:
             return float(snap.latest_trade.price)
@@ -48,7 +69,6 @@ class Executor:
         return None
 
     def _limit_sell(self, symbol: str, qty: int, limit_price: float):
-        """Premarket-safe sell (limit order)."""
         if qty <= 0:
             return None
         return self.broker.submit_limit_sell(symbol, qty, limit_price)
@@ -64,7 +84,6 @@ class Executor:
             return False
 
     def enter(self, plan: TradePlan) -> float:
-        """Submit entry, wait for fill, return ACTUAL filled qty."""
         order = self.broker.submit_limit_buy(plan.symbol, plan.qty, plan.entry * 1.005)
         state.record_trade(plan.symbol)
         filled = self.broker.wait_for_fill(order.id)
@@ -75,22 +94,31 @@ class Executor:
         return filled
 
     def manage(self, plan: TradePlan, market, filled_qty: float,
-               poll_secs: int = 5, max_minutes: int = 390) -> str:
-        """Manage scale-out exits, sized from the ACTUAL filled quantity."""
+               poll_secs: int = 5, recovered: bool = False,
+               deadline: float | None = None) -> str:
+        """Manage scale-out exits until closed or the fixed EOD cutoff.
+        recovered=True: skip the TP1 scale (we can't know if it already sold) and
+        simply protect the remaining shares with a stop + single take-profit."""
         filled = int(filled_qty)
         if filled <= 0:
             return "no_fill"
 
-        tp1_qty = int(filled * CONFIG.tp1_size)
-        tp2_qty = filled - tp1_qty
+        if recovered:
+            tp1_qty, tp2_qty, tp1_done = 0, filled, True
+            log.info("RECOVERY: protecting %d %s (stop $%.2f / TP $%.2f)",
+                     filled, plan.symbol, plan.stop_price, plan.tp2_price)
+        else:
+            tp1_qty = int(filled * CONFIG.tp1_size)
+            tp2_qty = filled - tp1_qty
+            tp1_done = False
         remaining = filled
         tp1_order = None
-        tp1_filled = False
 
         if self.stream:
             self.stream.start(plan.symbol)
 
-        deadline = time.time() + max_minutes * 60
+        if deadline is None:
+            deadline = _eod_deadline_epoch()
         try:
             while time.time() < deadline:
                 price = self._current_price(plan.symbol, market)
@@ -98,30 +126,27 @@ class Executor:
                     time.sleep(poll_secs)
                     continue
 
-                # Reconcile a resting TP1 before any other decision
-                if tp1_order is not None and not tp1_filled:
+                if tp1_order is not None and not tp1_done:
                     if self._is_filled(tp1_order):
-                        tp1_filled = True
+                        tp1_done = True
                         remaining -= tp1_qty
                         log.info("TP1 confirmed filled on %s (%d left)", plan.symbol, remaining)
 
-                # Stop loss — cancel any resting TP, then exit everything (limit)
+                # Stop loss — cancel resting TP, then exit everything (limit)
                 if price <= plan.stop_price:
                     log.warning("STOP hit on %s @ $%.2f — exiting %d", plan.symbol, price, remaining)
-                    if tp1_order is not None and not tp1_filled:
+                    if tp1_order is not None and not tp1_done:
                         self.broker.cancel_order(tp1_order)
                     self._aggressive_exit(plan.symbol, remaining, price)
                     return "stopped"
 
-                # TP1: place the 75% limit sell once
-                if tp1_order is None and price >= plan.tp1_price:
+                if not recovered and tp1_order is None and price >= plan.tp1_price:
                     log.info("TP1 hit %s @ $%.2f — sell %d @ $%.2f",
                              plan.symbol, price, tp1_qty, plan.tp1_price)
                     o = self._limit_sell(plan.symbol, tp1_qty, plan.tp1_price)
                     tp1_order = o.id if o else None
 
-                # TP2: only after TP1 actually filled
-                if tp1_filled and price >= plan.tp2_price:
+                if tp1_done and price >= plan.tp2_price:
                     log.info("TP2 hit %s @ $%.2f — sell %d @ $%.2f",
                              plan.symbol, price, remaining, plan.tp2_price)
                     o = self._limit_sell(plan.symbol, remaining, plan.tp2_price)
@@ -131,9 +156,9 @@ class Executor:
 
                 time.sleep(poll_secs)
 
-            # End of session — cancel resting orders, flatten what's left
-            log.info("End of session — flattening remaining %s", plan.symbol)
-            if tp1_order is not None and not tp1_filled:
+            # Fixed EOD cutoff reached — cancel resting orders, flatten
+            log.info("EOD cutoff (%s ET) — flattening %s", CONFIG.eod_close, plan.symbol)
+            if tp1_order is not None and not tp1_done:
                 self.broker.cancel_order(tp1_order)
             last = self._current_price(plan.symbol, market) or plan.entry
             self._aggressive_exit(plan.symbol, remaining, last)

@@ -49,7 +49,8 @@ class MarketData:
             return {}
         try:
             req = StockSnapshotRequest(symbol_or_symbols=symbols, feed=self.feed)
-            return self.hist.get_stock_snapshots(req)
+            # NOTE: SDK method is singular get_stock_snapshot (returns dict by symbol)
+            return self.hist.get_stock_snapshot(req)
         except Exception as e:  # noqa: BLE001
             log.error("Snapshot fetch failed: %s", e)
             return {}

@@ -30,11 +30,21 @@ def test_build_plan_sizing_and_levels():
     plan = rm.build_plan("WXYZ", 1.45)
     assert plan is not None
     assert plan.qty == 620            # 900 / 1.45
-    assert plan.stop_price == 1.41    # -3%
+    assert plan.stop_price == 1.36    # -6%
     assert plan.tp1_price == 1.52     # +5%
     assert plan.tp2_price == 1.55     # +7%
     assert plan.tp1_qty + plan.tp2_qty == plan.qty
     assert plan.tp1_qty == 465        # 75%
+
+
+def test_recovery_plan_rebuilds_protective_levels():
+    rm = RiskManager(FakeBroker())
+    plan = rm.recovery_plan("MSTU", entry=10.00, qty=90)
+    assert plan.qty == 90
+    assert plan.stop_price == 9.40    # -6%
+    assert plan.tp1_price == 10.50    # +5%
+    assert plan.tp2_price == 10.70    # +7%
+    assert plan.tp1_qty + plan.tp2_qty == 90
 
 
 def test_build_plan_rejects_untradable():

@@ -1,5 +1,6 @@
 """
-AI analyzer tests — no real Anthropic calls.
+AI analyzer tests — no real Anthropic/Ollama calls. Covers both providers and
+the fail-SAFE behavior (disabled AI must NOT approve a blind trade).
 """
 from types import SimpleNamespace
 
@@ -12,33 +13,37 @@ def make_candidate():
                      pct_change=0.20, popped_before=True, max_past_pop=0.55)
 
 
-def test_disabled_ai_auto_approves():
+def test_disabled_ai_rejects_fail_safe():
     ai = AIAnalyzer()
     ai.enabled = False
     ai.client = None
     out = ai.evaluate(make_candidate())
-    assert out["approve"] is True
-    assert "disabled" in out["reason"].lower()
+    assert out["approve"] is False  # fail safe: no blind trades
 
 
-def _fake_client(text):
+def _anthropic_client(text):
     msg = SimpleNamespace(content=[SimpleNamespace(text=text)])
     return SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: msg))
 
 
-def test_parses_clean_json():
+def _ollama_client(text):
+    return SimpleNamespace(chat=lambda **kw: {"message": {"content": text}})
+
+
+def test_anthropic_parses_json():
     ai = AIAnalyzer()
     ai.enabled = True
-    ai.client = _fake_client('{"approve": true, "confidence": 80, "reason": "ok"}')
+    ai.provider = "anthropic"
+    ai.client = _anthropic_client('{"approve": true, "confidence": 80, "reason": "ok"}')
     out = ai.evaluate(make_candidate())
-    assert out["approve"] is True
-    assert out["confidence"] == 80
+    assert out["approve"] is True and out["confidence"] == 80
 
 
-def test_strips_code_fences():
+def test_ollama_parses_json_with_fences():
     ai = AIAnalyzer()
     ai.enabled = True
-    ai.client = _fake_client('```json\n{"approve": false, "confidence": 10, "reason": "weak"}\n```')
+    ai.provider = "ollama"
+    ai.client = _ollama_client('```json\n{"approve": false, "confidence": 20, "reason": "weak"}\n```')
     out = ai.evaluate(make_candidate())
     assert out["approve"] is False
 
@@ -46,6 +51,7 @@ def test_strips_code_fences():
 def test_bad_response_defaults_to_no_trade():
     ai = AIAnalyzer()
     ai.enabled = True
-    ai.client = _fake_client("not json at all")
+    ai.provider = "ollama"
+    ai.client = _ollama_client("not json at all")
     out = ai.evaluate(make_candidate())
     assert out["approve"] is False

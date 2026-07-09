@@ -31,6 +31,33 @@ class Orchestrator:
         self.stream = PriceStream()
         self.executor = Executor(self.broker, stream=self.stream)
 
+    def recover(self) -> bool:
+        """On startup, resume protecting any position left open (e.g. after a
+        crash or restart). Without this, an open position's stop/TP/EOD would go
+        unmanaged until noticed manually — the single biggest live-trading risk."""
+        try:
+            positions = self.broker.positions()
+        except Exception as e:  # noqa: BLE001
+            log.error("Recovery: could not fetch positions: %s", e)
+            return False
+        if not positions:
+            return False
+
+        p = positions[0]  # one-trade-per-day strategy -> at most one position
+        symbol = p.symbol
+        qty = int(float(p.qty))
+        entry = float(p.avg_entry_price)
+        log.warning("RECOVERY: open %s x%d @ $%.2f found — resuming management",
+                    symbol, qty, entry)
+        notify("Position recovery",
+               f"Resuming management of {symbol} x{qty} @ ${entry:.2f}")
+        plan = self.risk.recovery_plan(symbol, entry, qty)
+        outcome = self.executor.manage(plan, self.market, qty, recovered=True)
+        log.info("Recovered %s finished: %s", symbol, outcome)
+        notify("Recovered position closed", f"{symbol}: {outcome}")
+        write_daily_report(self.broker)
+        return True
+
     def run_once(self) -> None:
         log.info("=" * 60)
         log.info("Starting trading cycle | cash=$%.2f", self.broker.cash())

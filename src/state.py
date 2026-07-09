@@ -4,17 +4,22 @@ Tracks how many trades were taken today (enforces one-trade-per-day).
 """
 import json
 import os
-from datetime import date
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from .logger import get_logger
 
 log = get_logger("state")
 STATE_DIR = "state"
 STATE_FILE = os.path.join(STATE_DIR, "daily_state.json")
+_ET = ZoneInfo("America/New_York")
 
 
 def _today() -> str:
-    return date.today().isoformat()
+    """Trading day keyed to US/Eastern (market) time, not the server clock.
+    This is why 'trades today' resets correctly at ET midnight regardless of
+    where the bot runs."""
+    return datetime.now(_ET).date().isoformat()
 
 
 def _load() -> dict:

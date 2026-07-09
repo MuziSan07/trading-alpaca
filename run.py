@@ -7,6 +7,7 @@ Usage:
   python run.py --check    -> verify config + Alpaca connection only
 """
 import sys
+import threading
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -48,9 +49,19 @@ def main() -> None:
         check_only()
         return
 
+    if "--recover" in args:
+        log.info("Recovery check only…")
+        if not Orchestrator().recover():
+            log.info("No open position to recover.")
+        return
+
     if "--now" in args:
+        orch = Orchestrator()
+        # Always protect an already-open position before starting anything new.
+        if orch.recover():
+            return
         log.info("Running one cycle immediately…")
-        Orchestrator().run_once()
+        orch.run_once()
         return
 
     # Scheduled mode: run every weekday at SCAN_START (7 AM ET premarket)
@@ -63,6 +74,15 @@ def main() -> None:
         hour=int(hour),
         minute=int(minute),
     )
+    # On startup, resume protecting any position left open by a prior crash.
+    def _startup_recovery():
+        try:
+            Orchestrator().recover()
+        except Exception as e:  # noqa: BLE001
+            log.error("Startup recovery failed: %s", e)
+
+    threading.Thread(target=_startup_recovery, daemon=True).start()
+
     log.info("Scheduled daily run at %s ET (Mon-Fri). Waiting…", CONFIG.scan_start)
     try:
         scheduler.start()

@@ -19,14 +19,19 @@ Every weekday at **7:00 AM ET (premarket)** it:
    - **Volume increasing** and **price increasing**
    - Has **popped ≥ $0.50** on a past day
 2. **Selects the highest-volume** candidate.
-3. **Claude AI** judges whether the momentum is genuine (advisory — it cannot
-   override risk rules).
+3. **AI** judges whether the momentum is genuine (advisory — it cannot override
+   risk rules). Uses **local Ollama/Mistral by default** (free), or Claude via
+   `AI_PROVIDER=anthropic`. If the AI is unreachable, the bot fails **safe** (no trade).
 4. **Risk manager** sizes the position to **90% of cash** and runs safety checks
    (one-trade-per-day, PDT guard, tradable-symbol check).
 5. **Executes** the buy and manages exits:
    - Sell **75% at +5%**
    - Sell **25% at +7%**
-   - **Stop loss at −3%**
+   - **Stop loss at −6%**
+   - Force-flat by **8:00 PM ET** (`EOD_CLOSE`)
+
+On restart it **recovers any open position** and re-attaches the stop/TP/EOD, and
+the price stream **auto-reconnects** if the WebSocket drops.
 
 ---
 

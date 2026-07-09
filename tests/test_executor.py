@@ -2,10 +2,14 @@
 Executor tests using fakes (no Alpaca, no network). Verifies premarket-safe
 exits, fill-aware TP handling, and stop behavior.
 """
+import time
+
 from alpaca.trading.enums import OrderStatus
 
 from src.executor import Executor
 from src.risk_manager import TradePlan
+
+FAR = time.time() + 3600  # fixed future deadline so tests aren't time-of-day dependent
 
 
 class FakeOrder:
@@ -56,7 +60,7 @@ def make_plan():
 def test_stop_uses_limit_order_not_market():
     b = FakeBroker()
     ex = Executor(b, stream=FakeStream([1.90]))
-    out = ex.manage(make_plan(), market=None, filled_qty=100, poll_secs=0)
+    out = ex.manage(make_plan(), market=None, filled_qty=100, poll_secs=0, deadline=FAR)
     assert out == "stopped"
     # exited the full 100 via a LIMIT sell (premarket-safe), priced below market
     assert b.sells and b.sells[0][0] == 100
@@ -66,7 +70,7 @@ def test_stop_uses_limit_order_not_market():
 def test_scale_out_targets_hit_in_order():
     b = FakeBroker()
     ex = Executor(b, stream=FakeStream([2.11, 2.20, 2.20]))
-    out = ex.manage(make_plan(), market=None, filled_qty=100, poll_secs=0)
+    out = ex.manage(make_plan(), market=None, filled_qty=100, poll_secs=0, deadline=FAR)
     assert out == "target_reached"
     # 75 sold at TP1, then 25 sold at TP2
     assert (75, 2.10) in b.sells
@@ -77,5 +81,15 @@ def test_partial_fill_sizes_exits_from_real_qty():
     b = FakeBroker()
     ex = Executor(b, stream=FakeStream([1.50]))
     # only 40 shares actually filled -> stop should exit 40, not 100
-    ex.manage(make_plan(), market=None, filled_qty=40, poll_secs=0)
+    ex.manage(make_plan(), market=None, filled_qty=40, poll_secs=0, deadline=FAR)
     assert b.sells[0][0] == 40
+
+
+def test_recovery_mode_protects_position():
+    b = FakeBroker()
+    ex = Executor(b, stream=FakeStream([1.90]))
+    # recovered position: stop must still fire and exit the full remaining qty
+    out = ex.manage(make_plan(), market=None, filled_qty=100, poll_secs=0,
+                    recovered=True, deadline=FAR)
+    assert out == "stopped"
+    assert b.sells[0][0] == 100

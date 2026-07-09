@@ -77,3 +77,15 @@ class RiskManager:
             symbol, qty, price, stop_price, tp1_qty, tp1_price, tp2_qty, tp2_price,
         )
         return plan
+
+    def recovery_plan(self, symbol: str, entry: float, qty: int) -> TradePlan:
+        """Rebuild a protective plan for a position found already open (restart)."""
+        tp1_qty = int(qty * CONFIG.tp1_size)
+        return TradePlan(
+            symbol=symbol, qty=qty, entry=entry,
+            stop_price=round(entry * (1 - CONFIG.stop_pct), 2),
+            tp1_price=round(entry * (1 + CONFIG.tp1_pct), 2),
+            tp1_qty=tp1_qty,
+            tp2_price=round(entry * (1 + CONFIG.tp2_pct), 2),
+            tp2_qty=qty - tp1_qty,
+        )

@@ -28,8 +28,12 @@ class Config:
     alpaca_paper: bool = os.getenv("ALPACA_PAPER", "true").lower() != "false"
     data_feed: str = os.getenv("ALPACA_DATA_FEED", "iex")
 
+    # AI provider: "ollama" (free, local) or "anthropic" (Claude)
+    ai_provider: str = os.getenv("AI_PROVIDER", "ollama").lower()
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
     claude_model: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "mistral")
+    ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
     # --- Strategy parameters ---
     max_price: float = _f("MAX_PRICE", 5.00)              # penny stocks <= $5
@@ -43,11 +47,12 @@ class Config:
     tp1_size: float = _f("TP1_SIZE", 0.75)
     tp2_pct: float = _f("TP2_PCT", 0.07)    # +7% -> sell remaining 25%
     tp2_size: float = _f("TP2_SIZE", 0.25)
-    stop_pct: float = _f("STOP_PCT", 0.03)  # -3% stop loss
+    stop_pct: float = _f("STOP_PCT", 0.06)  # -6% stop loss
 
     max_trades_per_day: int = _i("MAX_TRADES_PER_DAY", 1)
-    max_float: int = _i("MAX_FLOAT", 20_000_000)  # low-float ceiling
+    max_float: int = _i("MAX_FLOAT", 2_000_000)  # low-float ceiling (2M)
     scan_start: str = os.getenv("SCAN_START", "07:00")  # 7 AM ET premarket
+    eod_close: str = os.getenv("EOD_CLOSE", "20:00")     # force-flat by 8 PM ET
 
     # --- Dashboard security ---
     dashboard_user: str = os.getenv("DASHBOARD_USER", "admin")
@@ -68,8 +73,10 @@ class Config:
         problems = []
         if not self.alpaca_api_key or not self.alpaca_secret_key:
             problems.append("Missing ALPACA_API_KEY / ALPACA_SECRET_KEY in .env")
-        if not self.anthropic_api_key:
-            problems.append("Missing ANTHROPIC_API_KEY in .env (AI analysis disabled)")
+        if self.ai_provider == "anthropic" and not self.anthropic_api_key:
+            problems.append("AI_PROVIDER=anthropic but ANTHROPIC_API_KEY missing")
+        if self.ai_provider not in ("ollama", "anthropic"):
+            problems.append(f"Unknown AI_PROVIDER '{self.ai_provider}' (use ollama or anthropic)")
         if not (0 < self.cash_allocation <= 1):
             problems.append("CASH_ALLOCATION must be between 0 and 1")
         if abs((self.tp1_size + self.tp2_size) - 1.0) > 0.001:

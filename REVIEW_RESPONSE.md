@@ -19,7 +19,7 @@ patches). All changes are covered by the test suite (**26 passing**).
 | `get_stock_snapshots` had no such attribute | ✅ Corrected to the SDK's singular `get_stock_snapshot` (verified against installed alpaca-py 0.43). |
 | Recurring `IndentationError` in executor | ✅ Executor rewritten cleanly; EOD logic is one small, tested function. |
 | WebSocket drops ("no close frame") crashing the bot | ✅ Stream now runs under a **supervised auto-reconnect** loop with capped backoff; added `is_stale()` health check. No more full-process restart just to reconnect. |
-| Daily counter didn't reset properly | ✅ "Trading day" is now keyed to **US/Eastern** time, so it resets at ET midnight regardless of server timezone. |
+| Daily counter didn't reset properly | ✅ Two-part fix: (1) "trading day" keyed to **US/Eastern** so it resets at ET midnight regardless of server tz; (2) **`RESET_ON_FLAT=true`** (default) — once the account is **flat**, the bot may evaluate new candidates again the same day (exactly your ask). The real limiter is now "no open position" + the PDT guard; it also never stacks positions. Set `RESET_ON_FLAT=false` for a strict `MAX_TRADES_PER_DAY` cap. |
 | **No position recovery on restart** (biggest risk) | ✅ On startup the bot now **detects any open position and resumes managing it** (stop + take-profit + EOD). Wired into `run.py` (`--now`, scheduled startup, and a new `--recover`). |
 
 ## The unexplained −15.17% swing — likely root cause

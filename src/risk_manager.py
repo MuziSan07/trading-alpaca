@@ -38,14 +38,24 @@ class RiskManager:
         self.broker = broker
 
     def can_trade_today(self) -> tuple[bool, str]:
-        if state.trades_today() >= CONFIG.max_trades_per_day:
-            return False, "Daily trade limit reached"
+        # Never stack: only one position at a time.
+        try:
+            if self.broker.positions():
+                return False, "A position is already open"
+        except Exception as e:  # noqa: BLE001
+            log.warning("Could not check open positions: %s", e)
 
-        # PDT guardrail
+        # PDT guardrail — the real limiter for a <$25k day-trading account.
         acct = self.broker.account()
         equity = float(acct.equity)
         if equity < 25_000 and int(acct.daytrade_count) >= 3:
             return False, "PDT limit: <$25k account already has 3 day-trades in 5 days"
+
+        # Calendar cap: enforced only when NOT resetting on a flat account.
+        # With reset_on_flat=True, closing the position (going flat) frees the
+        # bot to evaluate new candidates again — bounded by the PDT guard above.
+        if not CONFIG.reset_on_flat and state.trades_today() >= CONFIG.max_trades_per_day:
+            return False, "Daily trade limit reached"
         return True, "ok"
 
     def build_plan(self, symbol: str, price: float) -> TradePlan | None:

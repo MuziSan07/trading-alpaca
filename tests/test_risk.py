@@ -9,17 +9,21 @@ from src.risk_manager import RiskManager
 
 
 class FakeBroker:
-    def __init__(self, cash=1000.0, equity=1000.0, daytrades=0, tradable=True):
+    def __init__(self, cash=1000.0, equity=1000.0, daytrades=0, tradable=True, positions=None):
         self._cash = cash
         self._equity = equity
         self._daytrades = daytrades
         self._tradable = tradable
+        self._positions = positions or []
 
     def cash(self):
         return self._cash
 
     def account(self):
         return SimpleNamespace(equity=self._equity, daytrade_count=self._daytrades)
+
+    def positions(self):
+        return self._positions
 
     def is_tradable(self, symbol):
         return self._tradable
@@ -57,27 +61,43 @@ def test_build_plan_rejects_insufficient_cash():
     assert rm.build_plan("WXYZ", 5.00) is None
 
 
-def test_pdt_guard_blocks_fourth_daytrade(monkeypatch):
-    import src.risk_manager as rmmod
-    monkeypatch.setattr(rmmod.state, "trades_today", lambda: 0)
-    rm = RiskManager(FakeBroker(equity=5000.0, daytrades=3))
+def test_blocks_when_position_already_open():
+    rm = RiskManager(FakeBroker(equity=5000.0, positions=["MSTU"]))
+    ok, reason = rm.can_trade_today()
+    assert ok is False
+    assert "open" in reason.lower()
+
+
+def test_pdt_guard_blocks_fourth_daytrade():
+    rm = RiskManager(FakeBroker(equity=5000.0, daytrades=3, positions=[]))
     ok, reason = rm.can_trade_today()
     assert ok is False
     assert "PDT" in reason
 
 
-def test_daily_limit_blocks_second_trade(monkeypatch):
+def test_flat_account_allows_new_trade_even_after_one(monkeypatch):
+    # reset_on_flat default True: closing the position frees a new evaluation
     import src.risk_manager as rmmod
     monkeypatch.setattr(rmmod.state, "trades_today", lambda: 1)
-    rm = RiskManager(FakeBroker(equity=5000.0, daytrades=0))
-    ok, reason = rm.can_trade_today()
-    assert ok is False
-    assert "limit" in reason.lower()
+    rm = RiskManager(FakeBroker(equity=5000.0, daytrades=0, positions=[]))
+    ok, _ = rm.can_trade_today()
+    assert ok is True
 
 
-def test_can_trade_when_clear(monkeypatch):
+def test_strict_daily_cap_when_reset_off(monkeypatch):
     import src.risk_manager as rmmod
-    monkeypatch.setattr(rmmod.state, "trades_today", lambda: 0)
-    rm = RiskManager(FakeBroker(equity=5000.0, daytrades=0))
+    monkeypatch.setattr(rmmod.state, "trades_today", lambda: 1)
+    object.__setattr__(rmmod.CONFIG, "reset_on_flat", False)  # frozen dataclass bypass
+    try:
+        rm = RiskManager(FakeBroker(equity=5000.0, daytrades=0, positions=[]))
+        ok, reason = rm.can_trade_today()
+        assert ok is False
+        assert "limit" in reason.lower()
+    finally:
+        object.__setattr__(rmmod.CONFIG, "reset_on_flat", True)
+
+
+def test_can_trade_when_clear_and_flat():
+    rm = RiskManager(FakeBroker(equity=5000.0, daytrades=0, positions=[]))
     ok, _ = rm.can_trade_today()
     assert ok is True

@@ -50,6 +50,9 @@ class Config:
     stop_pct: float = _f("STOP_PCT", 0.06)  # -6% stop loss
 
     max_trades_per_day: int = _i("MAX_TRADES_PER_DAY", 1)
+    # When True, a new trade is allowed once the account is FLAT again (the real
+    # limiter becomes "no open position" + PDT), instead of a hard calendar cap.
+    reset_on_flat: bool = os.getenv("RESET_ON_FLAT", "true").lower() != "false"
     max_float: int = _i("MAX_FLOAT", 2_000_000)  # low-float ceiling (2M)
     scan_start: str = os.getenv("SCAN_START", "07:00")  # 7 AM ET premarket
     eod_close: str = os.getenv("EOD_CLOSE", "20:00")     # force-flat by 8 PM ET

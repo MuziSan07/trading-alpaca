@@ -10,6 +10,7 @@ keys are set, so it always renders for a demo.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import math
 import os
@@ -46,12 +47,21 @@ def gate():
     return redirect(url_for("login"))
 
 
+def _ct_equal(a, b) -> bool:
+    """Constant-time string compare, so login does not leak the username or
+    password via response timing."""
+    return hmac.compare_digest(str(a or ""), str(b or ""))
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
     if request.method == "POST":
-        if (request.form.get("username") == CONFIG.dashboard_user
-                and request.form.get("password") == CONFIG.dashboard_password):
+        # Evaluate both comparisons unconditionally (no short-circuit) to keep
+        # the timing independent of which field was wrong.
+        user_ok = _ct_equal(request.form.get("username"), CONFIG.dashboard_user)
+        pass_ok = _ct_equal(request.form.get("password"), CONFIG.dashboard_password)
+        if user_ok and pass_ok:
             session["auth"] = True
             return redirect(url_for("index"))
         error = "Invalid username or password."

@@ -1,29 +1,28 @@
 # Penny-Stock Momentum Trading Bot — Complete Build Checklist
 
-> Client: **jberman93** (GitHub: `jibcampingcreations-a11y`) · Budget: **$1,200** · Deadline: **before July 4** · 3 revisions
 > Stack: **Python + alpaca-py + Claude + Docker + GitHub** · Paper-trade first, then live.
 
 Legend: `[ ]` = to do · `[~]` = in progress · `[x]` = done
 
 ---
 
-## 📊 PROGRESS (updated June 27 — MVP built)
+## PROGRESS (MVP built)
 
 | Phase | Status |
 |---|---|
-| 0 — Setup (structure, config, Docker, gitignore, requirements) | ✅ Done |
-| 1 — Alpaca connection (wrapper, paper/live, account, kill switch) | ✅ Done |
-| 2 — Market data (universe, snapshots, bars, IEX/SIP toggle) | ✅ Done |
-| 3 — Scanner (all 6 filters + highest-volume selection) | ✅ Done |
-| 4 — AI/Claude agent (pop check, verdict, anti-rogue guardrail) | ✅ Done |
-| 5 — Risk management (90% sizing, 3% stop, 1/day, PDT guard) | ✅ Done |
-| 6 — Execution (buy + scale-out exits + stop, premarket limits) | ✅ Done |
-| 7 — Orchestration (7 AM scheduler, daily flow, state) | ✅ Done |
-| 8 — Security (keys, kill switch, audit log, **security_check.py + SECURITY.md**) | ✅ Done |
-| 9 — Logging + **daily report (reporter.py)** | ✅ Done |
-| 10 — Testing (**13 tests pass: strategy + risk + scanner mocks**) | 🟡 live paper run pending keys |
-| 11 — Docs (README, CALL_GUIDE, DECISIONS, SECURITY, SETUP_KEYS, demo.py) | ✅ Done |
-| 12 — Open decisions | ✅ free defaults set (DECISIONS.md); confirm w/ client phase 2 |
+| 0 — Setup (structure, config, Docker, gitignore, requirements) | Done |
+| 1 — Alpaca connection (wrapper, paper/live, account, kill switch) | Done |
+| 2 — Market data (universe, snapshots, bars, IEX/SIP toggle) | Done |
+| 3 — Scanner (all 6 filters + highest-volume selection) | Done |
+| 4 — AI/Claude agent (pop check, verdict, anti-rogue guardrail) | Done |
+| 5 — Risk management (90% sizing, 3% stop, 1/day, PDT guard) | Done |
+| 6 — Execution (buy + scale-out exits + stop, premarket limits) | Done |
+| 7 — Orchestration (7 AM scheduler, daily flow, state) | Done |
+| 8 — Security (keys, kill switch, audit log, **security_check.py + SECURITY.md**) | Done |
+| 9 — Logging + **daily report (reporter.py)** | Done |
+| 10 — Testing (**13 tests pass: strategy + risk + scanner mocks**) | Partial — live paper run pending keys |
+| 11 — Docs (README, CALL_GUIDE, DECISIONS, SECURITY, SETUP_KEYS, demo.py) | Done |
+| 12 — Open decisions | Done — free defaults set (DECISIONS.md) |
 
 **Extras done:** WebSocket streaming (`stream.py`), partial-fill handling,
 free yfinance float/volume, GitHub repo pushed (MuziSan07/trading-alpaca).
@@ -36,7 +35,7 @@ free yfinance float/volume, GitHub repo pushed (MuziSan07/trading-alpaca).
 ## PHASE 0 — Project Setup & Foundations
 
 ### 0.1 Repository & environment
-- [ ] Create GitHub repo (private) and add collaborator `jibcampingcreations-a11y`
+- [ ] Create GitHub repo (private) and add the client as a collaborator
 - [ ] Add `README.md` (overview, setup steps, how to run)
 - [ ] Add `.gitignore` (ignore `.env`, `__pycache__`, logs, secrets, `venv/`)
 - [ ] Add `LICENSE` / usage notice

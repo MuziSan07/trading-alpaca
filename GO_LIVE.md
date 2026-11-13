@@ -20,7 +20,7 @@ Paste into `.env`:
 ```bash
 python run.py --check
 ```
-✅ Expect: account status, cash, "Alpaca OK". ❌ If it errors, re-check the keys.
+Expect: account status, cash, "Alpaca OK". If it errors, re-check the keys.
 
 ## 3. Smoke-test the pipeline
 ```bash
@@ -56,7 +56,7 @@ Go-live bar: **no critical errors + break-even-or-better**.
 1. Generate **live** keys in Alpaca (Live Trading mode).
 2. In `.env`: set live keys and `ALPACA_PAPER=false`.
 3. `python run.py --check` again, then start small.
-4. Keep the kill switch handy: dashboard ⛔ button or `Broker.kill_switch()`.
+4. Keep the kill switch handy: dashboard kill button or `Broker.kill_switch()`.
 
 ---
 

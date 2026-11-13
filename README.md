@@ -120,7 +120,7 @@ scan time. See `.env.example` for the full list.
 
 ---
 
-## ⚠️ Important real-world notes
+## Important real-world notes
 
 - **Alpaca trades only listed stocks.** True OTC sub-$1 pennies are NOT available;
   the universe is realistically low-priced *listed* stocks ($1–$5).
@@ -128,7 +128,7 @@ scan time. See `.env.example` for the full list.
   needed. Alpaca's IEX feed is used only for execution prices. (Paid SIP remains
   an optional one-line upgrade: `ALPACA_DATA_FEED=sip`.)
 - **Low-float filter is LIVE and FREE** via yfinance `floatShares`
-  (ceiling = `MAX_FLOAT`, default 50M).
+  (ceiling = `MAX_FLOAT`, default 2M).
 - **PDT rule:** accounts under $25k are limited to 3 day-trades per 5 business
   days. The bot blocks trades that would breach this.
 - **Premarket = limit orders only** (handled automatically).
@@ -154,3 +154,10 @@ src/
   logger.py            # audit logging
 tests/test_strategy.py # unit tests for the strategy math
 ```
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file
+for details.
